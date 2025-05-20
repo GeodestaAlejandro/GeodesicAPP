@@ -36,13 +36,13 @@ class EllipsoidModel:
         return GeodeticCoordinates(latitude=np.degrees(lat), longitude=np.degrees(lon), height=h)
 
     def parametric_to_geocentric(self, param: ParametricCoordinates) -> GeocentricCoordinates:
-        X = self.a * np.cos(param.phi)
-        Z = self.b * np.sin(param.phi)
+        X = self.a * np.cos(param.latitude)
+        Z = self.b * np.sin(param.latitude)
         return GeocentricCoordinates(X=X, Y=0, Z=Z)
 
     def geocentric_to_parametric(self, geo: GeocentricCoordinates) -> ParametricCoordinates:
         theta = np.arctan2(geo.Z * self.a, geo.X * self.b)
-        return ParametricCoordinates(phi=theta, lambda_=0, h=0)
+        return ParametricCoordinates(latitude=theta, longitude_=0, h=0)
 
 def convert_coordinates(input_coords, input_system, output_system):
     ellipsoid = EllipsoidModel()
