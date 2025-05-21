@@ -1,18 +1,17 @@
 import numpy as np
-from models import GeodeticCoordinates, GeocentricCoordinates, ParametricCoordinates
 
-# Constantes del modelo WGS84
-WGS84_A = 6378137.0
-WGS84_F = 1 / 298.257223563
+from models import GeodeticCoordinates, GeocentricCoordinates, ParametricCoordinates
 
 class EllipsoidModel:
     def __init__(self, model="WGS84"):
-        self.a = WGS84_A
-        self.f = WGS84_F
+        params = EllipsoidModel.get(model)
+        self.a = params("a")
+        self.f = params("f")
         self.b = self.a * (1 - self.f)
 
     @property
     def e2(self):
+
         """Excentricidad al cuadrado."""
         return self.f * (2 - self.f)
 

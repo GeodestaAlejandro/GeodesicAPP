@@ -1,4 +1,23 @@
-WGS84_A = 6378137.0  # Semieje mayor (radio ecuatorial)
-WGS84_B = 6356752.314245  # Semieje menor (radio polar)
-WGS84_F = 1 / 298.257223563  # Aplanamiento
-WGS84_E2 = 2 * WGS84_F - WGS84_F**2  # Excentricidad cuadrada
+
+# Cada modelo maneja presiciones diferentes.
+ELLIPSOID_MODELS = {
+    "WGS84":{
+        "a": 6378137.0,  
+        "f": 1 / 298.257223563
+    },
+    "GRS80": {  
+        "a": 6378137.0,  
+        "f": 1 / 298.257222101  
+    },
+    "WGS72": {  
+        "a": 6378135.0,  
+        "f": 1 / 298.26  
+    }  
+}
+
+# Tipos de coordenadas.
+COORDINATES_TYPE = [  
+    "Geodesic",  
+    "Geocentric",  
+    "Parametric"  
+]  

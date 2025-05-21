@@ -1,8 +1,32 @@
 import numpy as np
 from pydantic import BaseModel, Field, validator
 import re
+from typing import Any, Dict, Literal  
+  
+class EllipsoidAndTypeInput(BaseModel):
+    ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
+    coordinate_type: Literal["Geodesic", "Geocentric", "Parametric"]
 
-# Ya estan todas las variables por tipo de sistema de coordenada y por una sola variable y 
+class CoordinateInput(BaseModel):
+    ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
+    coordinate_type: Literal["Geodesic", "Geocentric", "Parametric"]
+    coordinates: Dict[str, Any]
+
+# Modelo de elipsoides y geoides.
+class EllipsoidModel:
+    def __init__(self, model="WGS84"):
+        params = EllipsoidModel.get(model)
+        self.a = params("a")
+        self.f = params("f")
+        self.b = self.a * (1 - self.f)
+
+    @property
+    def e2(self):
+
+        """Excentricidad al cuadrado."""
+        return self.f * (2 - self.f)
+
+# Ya estan todas las variables por tipo de sistema de coordenada y por una sola variable.
 # Funcion gardos a decimales.
 def dms_decimal(dms_str = str) -> float:
 
@@ -29,35 +53,42 @@ class SingleParameter(BaseModel):
             if not (-180 <= value <= 180):
                 raise ValueError("La longitud lambda debe estar entre -180° y 180°")
 
-class latitude(SingleParameter):
+#  Single parameter geodesic.
+class latitudeGeodesic(SingleParameter):
+    pass
+class longitudeGeodesic(SingleParameter):
     pass
 
-# class W(SingleParameter):
-#     pass
-
-class Theta(SingleParameter):
+# single parameter geocentrics.
+class w(SingleParameter):
+    pass
+class longitudeGeocentric(SingleParameter):
     pass
 
-class longitude(SingleParameter):
+#  Single parameter parametric.
+class latitudeParametric(SingleParameter):
     pass
-# dos parametros geodesicos 
-class TwoParameters(BaseModel):
-    latitude: float
-    longitude: float
-# dos parametros geocentricos
-class TwoParameters(BaseModel):
-    x: float
-    y: float
+class longitudeParametric(SingleParameter):
+    pass
 
-# three parameters
+# # dos parametros geodesicos 
+# class TwoParameters(BaseModel):
+#     latitude: float
+#     longitude: float
+# # dos parametros geocentricos
+# class TwoParameters(BaseModel):
+#     x: float
+#     y: float
+
+# three parameters - coordinates Geodesics
 class GeodesicCoordinates(BaseModel):
 
-    latitude: float = Field(..., ge=-90, le=90, descripcion="Laittud en grados")
-    longitude: float = Field(..., ge=-180, le=180, descripcion="Longitud en grados")
-    orthometric_height: float = Field(..., ge=0, le=9000)
+    latitudeGeodesic: float = Field(..., ge=-90, le=90, descripcion="Latitud en grados")
+    longitudeGeodesic: float = Field(..., ge=-180, le=180, descripcion="Longitud en grados")
+    orthometricHeight: float = Field(..., ge=0, le=9000)
     unit: str = Field(..., regex="^m$")
 
-    @validator('latitud', 'longitud', pre=True)
+    @validator('latitudeGeodesic', 'longitudeGeodesic', pre=True)
     def convertir_a_decimal(cls, v):
         if isinstance(v, float) or isinstance(v, int):
             return float(v)
@@ -68,7 +99,9 @@ class GeodesicCoordinates(BaseModel):
         except ValueError:
             raise ValueError("La coordenada debe ser decimal o en formato DMS")
 
+#  trhee Parameters - coordinates Geocentric.
 class GeocentricCoordinates(BaseModel):
+
     X: float = Field(..., ge= -6500000,le=65000000, descripcion="Distancia X")
     Y: float = Field(..., ge= -65000000, le=65000000, description="Distancia Y")
     Z: float = Field(..., ge=65000000, le=65000000, description="Distancia de altura")
@@ -80,8 +113,21 @@ class GeocentricCoordinates(BaseModel):
     #         raise ValueError("Coordenadas geocéntricas fuera de rango")
     #     return value
 
+#  Three Parameter - coordinate Parametrics.
 class ParametricCoordinates(BaseModel):
+
     latitudeParametric: float = Field(..., ge=-90, le=90, descripcion="Laittud Parametrica en grados")
     longitudeParametric: float = Field(..., ge=-180, le=180, descripcion="Longitud Parametrica en grados")
-    orthometric_heightParametric: float = Field(..., ge=0, le=9000)
+    orthometricHeightParametric: float = Field(..., ge=0, le=9000)
     unit: str = Field(..., regex="^m$")
+    
+    @validator('latitudeParametric', 'longitudeParametric', pre=True)
+    def convertir_a_decimal(cls, v):
+        if isinstance(v, float) or isinstance(v, int):
+            return float(v)
+        if isinstance(v, str) and "°" in v:
+            return dms_decimal(v)
+        try:
+            return float(v)
+        except ValueError:
+            raise ValueError("La coordenada debe ser decimal o en formato DMS")
