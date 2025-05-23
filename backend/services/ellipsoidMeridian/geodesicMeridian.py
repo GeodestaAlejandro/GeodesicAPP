@@ -13,12 +13,16 @@ def lat_geod_to_xz(latitudeGeodesic_deg, ellipsoid):
     Z = N * (1 - e2) * math.sin(phi)
     return X, Z, N
 
-# De (X,Z) -> phi
-def xz_to_lat_geod(X, Z, ellipsoid):  
-    a = ellipsoid['a']  
-    f = ellipsoid['f']  
-    b = a * (1 - f)  
-    ratio = (a / b) * (Z / X)  
-    phi_rad = math.atan(ratio)  
-    latitudeGeodesic_deg = math.degrees(phi_rad)  
-    return latitudeGeodesic_deg
+# De (X,Z) -> phi: Para φ (geodésica) se necesita iterar, ya que la altura sobre el elipsoide no es conocida directamente.
+def xz_to_lat_geod(X, Z, ellipsoid):
+    a = ellipsoid['a']
+    f = ellipsoid['f']
+    e2 = 2 * f - f ** 2
+    p = abs(X)
+    phi = math.atan2(Z, p)
+    prev = 0
+    while abs(phi - prev) > 1e-11:
+        N = a / math.sqrt(1 - e2 * (math.sin(phi)**2))
+        prev = phi
+        phi = math.atan2(Z + e2 * N * math.sin(phi), p)
+    return math.degrees(phi)

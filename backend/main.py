@@ -104,60 +104,28 @@ def calculate_angules(data: EllipsoidAndTypeToAnguleInput):
     try:  
         coords = GeocentricCoordinates(**data.coordinates)  
         X = coords.X  
-        Y = coords.Y  
+        Y = Optional[coords.Y]
         Z = coords.Z  
         print(X,Y,Z)
         if X is None or (data.coordinate_type_want in ["Geodesic", "Parametric"] and Y is None) or (data.coordinate_type_want == "Geocentric" and Z is None):
             raise HTTPException(400, "Coordenadas incompletas para el cálculo")
         if data.coordinate_type_want == "Geodesic":  
-            latitudeGeodesic = xz_to_lat_geod(X, Y, ellipsoid)  
+            latitudeGeodesic = xz_to_lat_geod(X, Z, ellipsoid)  
             if latitudeGeodesic is None:  
                 raise HTTPException(400, "Error en el cálculo Geodesic")  
-            return latitudeGeodesic  
-        elif data.coordinate_type_want == "Geocentric":  
-            latitudeGeodesic = xz_lat_geocentric(X, Z, ellipsoid)  
-            if latitudeGeodesic is None:  
-                raise HTTPException(400, "Error en el cálculo Geocentric")  
-            return latitudeGeodesic  
-        elif data.coordinate_type_want == "Parametric":  
-            latitudeParametric = xz_to_theta_parametric(X, Y, ellipsoid)  
-            if latitudeParametric is None:  
-                raise HTTPException(400, "Error en el cálculo Parametric")  
-            return latitudeParametric  
+            return {"Latitud Geodesica (Phi)": latitudeGeodesic}
+        elif data.coordinate_type_want == "Geocentric":
+            latitudeGeocentric = xz_lat_geocentric(X, Z, ellipsoid)
+            if latitudeGeocentric is None:
+                raise HTTPException(400, "Error en el cálculo Geocentric")
+            return {"Latitud Geocentrica (W)": latitudeGeocentric}
+        elif data.coordinate_type_want == "Parametric":
+            latitudeParametric = xz_to_theta_parametric(X, Z, ellipsoid)
+            if latitudeParametric is None:
+                raise HTTPException(400, "Error en el cálculo Parametric")
+            return {"Latitud Parametrica (Omega)": latitudeParametric}
         else:  
             raise HTTPException(400, "Tipo de coordenada no válido")  
-  
+#   
     except Exception as e:  
         raise HTTPException(400, f"Error de cálculo: {e}")  
-
-# @app.post("/calculate_angules_with_xz/")  
-# def calculate_angules(data: EllipsoidAndTypeToAnguleInput):
-#     ellipsoid = ELLIPSOID_MODELS.get(data.ellipsoid)
-#     print(ellipsoid)
-#     if not ellipsoid:  
-#         raise HTTPException(400, "Modelo de elipsoide no válido")
-#     try:
-#         if data.coordinate_type_want == "Geodesic":
-#             coords =GeocentricCoordinates(**data.coordinates)
-#             X = coords.X
-#             Y = coords.Y
-#             latitudeGeodesic = xz_to_lat_geod(X, Y, ellipsoid)
-#             return (latitudeGeodesic)
-#         elif data.coordinate_type_want == "Geocentric":
-#             coords = GeocentricCoordinates(**data.coordinates)
-#             X = coords.X
-#             Z = coords.Z
-#             Rg = (X**2 + Z**2)**0.5
-#             latitudeGeodesic = xz_lat_geocentric(X, Z, ellipsoid)
-#             return (latitudeGeodesic)
-#         elif data.coordinate_type_want == "Parametric":
-#             coords = GeocentricCoordinates(**data.coordinates)
-#             X = coords.X
-#             Y = coords.Y
-#             latitudeParametric = xz_to_theta_parametric(X, Y, ellipsoid)
-#             return (latitudeParametric)
-#         else:  
-#             raise HTTPException(400, "Tipo de coordenada no válido")
-#     except Exception as e:  
-#         raise HTTPException(400, f"Error de cálculo: {e}")
-

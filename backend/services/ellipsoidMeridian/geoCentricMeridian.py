@@ -11,11 +11,6 @@ def lat_geocentric_to_xz(W_deg, ellipsoid):
     Rg = math.sqrt(X**2 + Z**2)
     return X, Z, Rg
 
-# De (X,Z) -> W
-def xz_lat_geocentric(X, Z, ellipsoid):  
-    a = ellipsoid['a']  
-    f = ellipsoid['f']  
-    b = a * (1 - f)  
-    W_rad = math.atan2(a * Z, b * X)  
-    W_deg = math.degrees(W_rad)
-    return W_deg
+# De (X,Z) -> W:  Para W (geocéntrica) basta con X y Z.
+def xz_lat_geocentric(X, Z):
+    return math.degrees(math.atan2(Z, X))
