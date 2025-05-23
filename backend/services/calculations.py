@@ -36,5 +36,5 @@ def calculate_xyz_from_geodesic(latitude, longitude, ellipsoid):
     y = (N * np.cos(np.radians(latitude)) * np.sin(np.radians(longitude)))
     z = (N * np.sqrt(1 - e2 * np.sin(np.radians(latitude))**2))
 
-# 2). (Rg,W,Lambda) = (X,Y,Z) - Geocentrica.
-def calculate_xyz_from_geocentric(Rg, w, logitudeGeocentric):
+# # 2). (Rg,W,Lambda) = (X,Y,Z) - Geocentrica.
+# def calculate_xyz_from_geocentric(Rg, w, logitudeGeocentric):
