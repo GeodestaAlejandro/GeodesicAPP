@@ -1,5 +1,4 @@
 
-# Cada modelo maneja presiciones diferentes.
 ELLIPSOID_MODELS = {
     "WGS84":{
         "a": 6378137.0,
@@ -15,9 +14,8 @@ ELLIPSOID_MODELS = {
     }
 }
 
-# Tipos de coordenadas.
-COORDINATES_TYPE = [  
-    "Geodesic",  
-    "Geocentric",  
-    "Parametric"  
-]  
+COORDINATES_TYPE = [
+    "Geodesic",
+    "Geocentric",
+    "Parametric"
+]

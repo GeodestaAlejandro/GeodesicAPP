@@ -2,13 +2,13 @@ import re
 from typing import Any, Dict, Literal, Optional  
 from pydantic import BaseModel, Field, root_validator, validator  
   
-def dms_decimal(dms_str: str) -> float:  
-    pattern = r"(\d+)°(\d+)'([\d.]+)\""  
-    match = re.match(pattern, dms_str.strip())  
-    if not match:  
-        raise ValueError("Las coordenadas deben estar en formato Grados, Minutos y Segundos, ej: 4°50'40.23\"")  
-    grados, minutos, segundos = map(float, match.groups())  
-    return grados + minutos / 60 + segundos / 3600  
+def dms_decimal(dms_str: str) -> float:
+    pattern = r"\s*([+-]?\d+)°\s*(\d+)'[\s]*([\d.]+)\""  
+    match = re.match(pattern, dms_str.strip())
+    if not match:
+        raise ValueError("Las coordenadas deben estar en formato Grados, Minutos y Segundos, ej: 4°50'40.23\"")
+    grados, minutos, segundos = map(float, match.groups())
+    return grados + minutos / 60 + segundos / 3600
   
 class GeodesicCoordinates(BaseModel):  
     latitudeGeodesic: Optional[float] = Field(None, ge=-90, le=90)  
@@ -31,7 +31,6 @@ class GeocentricCoordinates(BaseModel):
     X: Optional[float] = Field(None)  
     Y: Optional[float] = Field(None)  
     Z: Optional[float] = Field(None)  
-    # unit: Optional[str] = Field(None, pattern="^m$")  
   
 class ParametricCoordinates(BaseModel):  
     latitudeParametric: Optional[float] = Field(None, ge=-90, le=90)  
