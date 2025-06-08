@@ -33,7 +33,6 @@ def plot_meridian_ellipse_and_points(a, b, points, point_labels):
     plt.title('Puntos sobre la elipse meridiana')
     plt.legend()
 
-    # plt.axis('equal')
     lim_x = 1.1 * a
     lim_z = 1.1 * b
     plt.xlim(-lim_x, lim_x)
@@ -41,7 +40,6 @@ def plot_meridian_ellipse_and_points(a, b, points, point_labels):
 
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.show()
-
 
     # Memoria hecha para no usar almacenamietno de mi pc.
     buf = BytesIO()
