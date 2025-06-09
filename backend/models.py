@@ -27,9 +27,18 @@ class GeodesicCoordinates(BaseModel):
             raise ValueError("La coordenada debe ser decimal o en formato DMS")
   
 class CartesianCoordinates(BaseModel):
-    X: Optional[float] = Field(None)
-    Y: Optional[float] = Field(None)
-    Z: Optional[float] = Field(None)
+    X: Optional[float] = Field(None, ge=-1e8, le=1e8)
+    Y: Optional[float] = Field(None, ge=-1e8, le=1e8)
+    Z: Optional[float] = Field(None, ge=-1e8, le=1e8)
+  
+    @validator('X', 'Y', 'Z', pre=True)  
+    def parse_numeric(cls, v):  
+        if isinstance(v, (float, int)):  
+            return float(v)  
+        try:  
+            return float(v)  
+        except Exception:  
+            raise ValueError("Cada coordenada debe ser un número válido (float o int)")
     
 class GeocentricCoordinates(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90.0, le=90.0,)
@@ -66,12 +75,12 @@ class ParametricCoordinates(BaseModel):
   
 class EllipsoidAndTypeInput(BaseModel):
     ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
-    coordinate_type: Literal["Geodesic", "Geocentric", "Parametric"]
+    coordinate_type: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian"]
     coordinates: Dict[str, Any]
 
 class EllipsoidAndTypeToAnguleInput(BaseModel):
     ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
-    coordinate_type_want: Literal["Geodesic", "Geocentric", "Parametric"]
+    coordinate_type_want: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian"]
     coordinates: Dict[str, Any]
 
     

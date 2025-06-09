@@ -70,10 +70,39 @@ def parametricGeodesic_from_geocentric(a, b, e2, latitude):
     beta = parametric_from_geocentric(a, b, e2, latitude)
     return phi, beta
 
-def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, ellipsoid, coordinate_type):
+def XYZ_to_latitudeLongitude(X, Y, Z, a, e2, ellipsoid, coordinate_type):
+    
+     # Magnitud de la proyección en el plano XY  
+    vp = np.sqrt(X**2 + Y**2)
+    # Longitud geodésica  
+    lon = np.arctan2(Y, X)
+    print("lon", lon)
+    # Latitud inicial (método de Bowring)
+    secondTerm = e2 / (1 - e2)
+    phi = np.atan((Z / vp) * (1 + secondTerm))
+    # Ahora se calcula an base a estos datos ya calculados con phiSub0.
+    N_sub1 = calculate_N(phi, ellipsoid)
+    eps = 1e-12
+    phi_prev = 0
+    diff = abs(phi - phi_prev)
+    h = 0
+  
+    while diff > eps:
+        h_prev = h
+        h = vp / np.cos(phi) - N_sub1
+        phi_prev = phi
+        product = e2 * N_sub1 * np.sin(phi_prev)
+        phi = np.arctan((Z + product) / vp)
+        diff = abs(phi - phi_prev)
 
-# Aqui nombre al primer verticcal N, a Radio Geocentrico Rg, o a "a" de la mimsa forma para ser mas dinamico, aqui estos 3
-#  se llaman Rho (p)
+    print("phi", math.degrees(phi))
+    phi = math.degrees(phi)
+    lon = math.degrees(lon)
+    return phi, lon, h
+
+def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, ellipsoid, coordinate_type):
+    # Aqui nombre al primer verticcal N, a Radio Geocentrico Rg, o a "a" de la mimsa forma para ser mas dinamico, aqui estos 3
+    #  se llaman Rho (p)
     if coordinate_type == "Geodesic":
         # rho aqui es N
         rho_XY = calculate_N(latitude, ellipsoid)
@@ -92,6 +121,6 @@ def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, e
     X = (rho_XY + orthometricHeight) * np.cos(latitude) * np.cos(longitude)
     Y = (rho_XY + orthometricHeight) * np.cos(latitude) * np.sin(longitude)
     return X, Y, Z
-    
+
     
     
