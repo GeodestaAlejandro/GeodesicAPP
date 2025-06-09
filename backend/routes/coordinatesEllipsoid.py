@@ -51,29 +51,29 @@ def calculateAngules(data: EllipsoidAndTypeInput):
     try: 
         result = {}
         if data.coordinate_type == "Geodesic":
-            # print(coordinates['coordinates']['latitudeGeodesic'])
-            latitudeGeodesic = math.radians(coordinates['coordinates']['latitudeGeodesic'])
-            if latitudeGeodesic is None:
+            # print(coordinates['coordinates']['latitude'])
+            latitude = math.radians(coordinates['coordinates']['latitude'])
+            if latitude is None:
                 raise HTTPException(400, "Falta la latitud geodesica")
-            beta, psi = parametricGeocentric_from_geodesic(f, e2, latitudeGeodesic)
+            beta, psi = parametricGeocentric_from_geodesic(f, e2, latitude)
             result["latitudeParametric"] = math.degrees(beta)
             result["latitudeGeocentric"] = math.degrees(psi)
 
         elif data.coordinate_type == "Geocentric":
-            # print(coordinates['coordinates']['latitudeGeocentric'])
-            latitudeGeocentric = math.radians(coordinates['coordinates']['latitudeGeocentric'])
-            if latitudeGeocentric is None:
+            # print(coordinates['coordinates']['latitude'])
+            latitude = math.radians(coordinates['coordinates']['latitude'])
+            if latitude is None:
                 raise HTTPException(400, "Falta la latitud geocentrica")
-            beta, phi = parametricGeodesic_from_geocentric(a, b, e2, latitudeGeocentric)
+            beta, phi = parametricGeodesic_from_geocentric(a, b, e2, latitude)
             result["latitudeParametric"] = math.degrees(beta)
             result["latitudeGeodesic"] = math.degrees(phi)
 
         elif data.coordinate_type == "Parametric":
-            # print(coordinates['coordinates']['latitudeParametric'])
-            latitudeParametric = math.radians(coordinates['coordinates']['latitudeParametric'])
-            if latitudeParametric is None:
+            # print(coordinates['coordinates']['latitude'])
+            latitude = math.radians(coordinates['coordinates']['latitude'])
+            if latitude is None:
                 raise HTTPException(400, "Falta la latitud paramétrica")
-            phi, psi = geocentricGeodesic_from_parametric(a, b, e2, f, latitudeParametric)
+            phi, psi = geocentricGeodesic_from_parametric(a, b, e2, f, latitude)
             result["latitudeGeodesic"] = math.degrees(phi)
             result["latitudeGeocentric"] = math.degrees(psi)
         else:

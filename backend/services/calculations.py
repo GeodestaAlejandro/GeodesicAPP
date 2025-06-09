@@ -19,55 +19,55 @@ def calculateRg(latitude, ellipsoid):
     print("Rg", Rg)
     return Rg
 
-def geocentricGeodesic_from_parametric(a, b, e2, f, latitudeParametric):
+def geocentricGeodesic_from_parametric(a, b, e2, f, latitude):
     # Dada beta (latitud paramétrica), calcula phi (latitud geodésica)
-    def geodesic_from_parametric(f, latitudeParametric):
+    def geodesic_from_parametric(f, latitude):
         # EJEMPLO DE COMPROBACION DE ECUACIÓN
         # ab = np.divide(a, b)
         # print("a / b =", ab)  
-        # print("latitudeeeeee",latitudeParametric)
-        # tan_lat_param = math.tan(latitudeParametric)  
-        # print("tan(latitudeParametric) =", tan_lat_param)  
+        # print("latitudeeeeee",latitude)
+        # tan_lat_param = math.tan(latitude)  
+        # print("tan(latitude) =", tan_lat_param)  
         # mult = ab * (tan_lat_param)  
-        # print("(a / b) * tan(latitudeParametric) =", mult)  
+        # print("(a / b) * tan(latitude) =", mult)  
         # phi = math.atan(mult)
-        # print("atan((a / b) * tan(latitudeParametric)) =", phi, "radianes")  
-        # print("Resultado en grados =", math.degrees(phi), "°")  
+        # print("atan((a / b) * tan(latitude)) =", phi, "radianes")
+        # print("Resultado en grados =", math.degrees(phi), "°")
         # return phi
-        # return math.atan((a / b) * math.tan(latitudeParametric))
-        return math.atan(math.tan(latitudeParametric) / (1 - f))
+        # return math.atan((a / b) * math.tan(latitude))
+        return math.atan(math.tan(latitude) / (1 - f))
     # Dada beta (latitud paramétrica), calcula psi (latitud geocéntrica)
-    def geocentric_from_parametric(a, b, e2, latitudeParametric):
-            return math.atan((1 - e2) * (a / b) * math.tan(latitudeParametric))
+    def geocentric_from_parametric(a, b, e2, latitude):
+            return math.atan((1 - e2) * (a / b) * math.tan(latitude))
         
-    phi = geodesic_from_parametric(f, latitudeParametric)
-    psi = geocentric_from_parametric(a, b, e2, latitudeParametric)
+    phi = geodesic_from_parametric(f, latitude)
+    psi = geocentric_from_parametric(a, b, e2, latitude)
     return phi, psi
 
-def parametricGeocentric_from_geodesic(e2, f, latitudeGeodesic):
+def parametricGeocentric_from_geodesic(e2, f, latitude):
     #  Dada phi (latitud geodésica), calcula beta (latitud paramétrica)
-    def parametric_from_geodesic(f, latitudeGeodesic):
-        # return math.atan((b / a) * math.tan(latitudeGeodesic))
-        return math.atan((1 - f) * math.tan(latitudeGeodesic))  
+    def parametric_from_geodesic(f, latitude):
+        # return math.atan((b / a) * math.tan(latitude))
+        return math.atan((1 - f) * math.tan(latitude))  
     # Dada phi (latitud geodésica), calcula psi (latitud geocéntrica)
-    def geocentric_from_geodesic(e2, latitudeGeodesic):
-        return math.atan((1 - e2) * math.tan(latitudeGeodesic))
-    beta = parametric_from_geodesic(f, latitudeGeodesic)
+    def geocentric_from_geodesic(e2, latitude):
+        return math.atan((1 - e2) * math.tan(latitude))
+    beta = parametric_from_geodesic(f, latitude)
     print("beta",beta)
-    psi = geocentric_from_geodesic(e2, latitudeGeodesic)
+    psi = geocentric_from_geodesic(e2, latitude)
     return beta, psi
 
-def parametricGeodesic_from_geocentric(a, b, e2, latitudeGeocentric):
+def parametricGeodesic_from_geocentric(a, b, e2, latitude):
     # Dada psi (latitud geocéntrica), calcula phi (latitud geodésica)
-    def geodesic_from_geocentric(e2, latitudeGeocentric):
-        return math.atan(math.tan(latitudeGeocentric) / (1 - e2))
+    def geodesic_from_geocentric(e2, latitude):
+        return math.atan(math.tan(latitude) / (1 - e2))
     # Dada psi (latitud geocéntrica), calcula beta (latitud paramétrica)
-    def parametric_from_geocentric(a, b, e2, latitudeGeocentric):
+    def parametric_from_geocentric(a, b, e2, latitude):
         # al parecer da igual la que se use, siempre dejo las que se asemejen mas al libro del profesor.
-        # return math.atan((b / a) * (math.tan(latitudeGeocentric) / (1 - e2)))
-        return math.atan((a / b) * (1 - e2) * math.tan(latitudeGeocentric))
-    phi = geodesic_from_geocentric(e2, latitudeGeocentric)
-    beta = parametric_from_geocentric(a, b, e2, latitudeGeocentric)
+        # return math.atan((b / a) * (math.tan(latitude) / (1 - e2)))
+        return math.atan((a / b) * (1 - e2) * math.tan(latitude))
+    phi = geodesic_from_geocentric(e2, latitude)
+    beta = parametric_from_geocentric(a, b, e2, latitude)
     return phi, beta
 
 def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, ellipsoid, coordinate_type):
