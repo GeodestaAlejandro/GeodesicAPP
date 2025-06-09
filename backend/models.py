@@ -11,21 +11,20 @@ def dms_decimal(dms_str: str) -> float:
     return grados + minutos / 60 + segundos / 3600
   
 class GeodesicCoordinates(BaseModel):  
-    latitudeGeodesic: Optional[float] = Field(None, ge=-90, le=90)  
-    longitudeGeodesic: Optional[float] = Field(None, ge=-180, le=180)  
-    orthometricHeight: Optional[float] = Field(None, ge=0, le=9000)  
-    unit: Optional[str] = Field(None, pattern="^m$")  
-  
-    @validator('latitudeGeodesic', 'longitudeGeodesic', pre=True)  
-    def parse_dms_or_decimal(cls, v):  
-        if isinstance(v, (float, int)):  
-            return float(v)  
-        if isinstance(v, str) and "°" in v:  
-            return dms_decimal(v)  
+    latitude: Optional[float] = Field(None, ge=-90, le=90)  
+    longitude: Optional[float] = Field(None, ge=-180, le=180)  
+    orthometricHeight: Optional[float] = Field(None, ge=0, le=9000)
+      
+    @validator('latitude', 'longitude', pre=True)
+    def parse_dms_or_decimal(cls, v):
+        if isinstance(v, (float, int)):
+            return float(v)
+        if isinstance(v, str) and "°" in v:
+            return dms_decimal(v)
         try:  
             return float(v)  
         except Exception:  
-            raise ValueError("La coordenada debe ser decimal o en formato DMS")  
+            raise ValueError("La coordenada debe ser decimal o en formato DMS")
   
 class CartesianCoordinates(BaseModel):
     X: Optional[float] = Field(None)
@@ -33,11 +32,11 @@ class CartesianCoordinates(BaseModel):
     Z: Optional[float] = Field(None)
     
 class GeocentricCoordinates(BaseModel):
-    latitudeGeocentric: Optional[float] = Field(None, ge=-90.0, le=90.0,)
-    longitudeGeocentric: Optional[float] = Field(None, ge=-180.0, le=180.0,)
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0,)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0,)
     orthometricHeight: Optional[float] = Field(None, ge=-500.0, le=10000.0, )
     
-    @validator('latitudeGeocentric', 'longitudeGeocentric', pre=True)  
+    @validator('latitude', 'longitude', pre=True)  
     def parse_dms_or_decimal(cls, v):  
         if isinstance(v, (float, int)):  
             return float(v)  
@@ -49,12 +48,12 @@ class GeocentricCoordinates(BaseModel):
             raise ValueError("La coordenada debe ser decimal o en formato DMS")
     
 class ParametricCoordinates(BaseModel):  
-    latitudeParametric: Optional[float] = Field(None, ge=-90, le=90)  
-    longitudeParametric: Optional[float] = Field(None, ge=-180, le=180)  
-    orthometricHeightParametric: Optional[float] = Field(None, ge=0, le=9000)  
+    latitude: Optional[float] = Field(None, ge=-90, le=90)  
+    longitude: Optional[float] = Field(None, ge=-180, le=180)  
+    orthometricHeight: Optional[float] = Field(None, ge=0, le=9000)  
     unit: Optional[str] = Field(None, pattern="^m$")  
   
-    @validator('latitudeParametric', 'longitudeParametric', pre=True)
+    @validator('latitude', 'longitude', pre=True)
     def parse_dms_or_decimal(cls, v):
         if isinstance(v, (float, int)):
             return float(v)

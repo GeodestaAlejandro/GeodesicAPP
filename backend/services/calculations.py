@@ -3,26 +3,20 @@ import math
 
 # Calcula el radio de curvatura en el primer vertical.
 def calculate_N(latitude, ellipsoid):
-    e2 = ellipsoid.e2
-    a = ellipsoid.a
+    a = ellipsoid['a']
+    f = ellipsoid['f']
+    e2 = 2*f - f**2
     return a / np.sqrt(1 - e2 * np.sin(np.radians(latitude))**2)
 
-# def calculate_Rg(logitudeGeocentric, ellipsoid):
-#     e2 = ellipsoid.e2
-  
-def calculate_Rg(latitude_deg, ellipsoid, h=0):  
-
-    a = ellipsoid.a  
-    e2 = ellipsoid.e2  
-    lat_rad = np.radians(latitude_deg)  
-    sin_lat = np.sin(lat_rad)  
-    cos_lat = np.cos(lat_rad)  
-      
-    N = a / np.sqrt(1 - e2 * sin_lat**2)  
-    X = (N + h) * cos_lat  
-    Z = (N * (1 - e2) + h) * sin_lat  
-      
-    Rg = np.sqrt(X**2 + Z**2)  
+def calculateRg(latitude, ellipsoid):
+    
+    a = ellipsoid['a']
+    f = ellipsoid['f']
+    e2 = 2*f - f**2
+    denominator = a * np.sqrt(1 - e2)
+    numerator = np.sqrt(1 - e2 * np.cos(latitude)**2)
+    Rg = denominator / numerator
+    print("Rg", Rg)
     return Rg
 
 def geocentricGeodesic_from_parametric(a, b, e2, f, latitudeParametric):
@@ -76,32 +70,28 @@ def parametricGeodesic_from_geocentric(a, b, e2, latitudeGeocentric):
     beta = parametric_from_geocentric(a, b, e2, latitudeGeocentric)
     return phi, beta
 
-# Calcula (x, z) en función de latitude.
-def calculate_xz_from_latitude(latitude, ellipsoid):
-    e2 = ellipsoid.e2
-    N = calculate_N(latitude, ellipsoid)
-    x = N * np.cos(np.radians(latitude))
-    z = N * (1 - e2) * np.sin(np.radians(latitude))
-    return {"x": x, "z": z}
+def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, ellipsoid, coordinate_type):
 
-# Calcula (x, y, z) en función de latitude, longitude y altura orthometric_height.
-def calculate_xyz_from_latitude_longitude(latitude, longitude_, orthometric_height=0, ellipsoid=str):
-    N = calculate_N(latitude, ellipsoid)
-    e2 = ellipsoid.e2
-    x = (N + orthometric_height) * np.cos(np.radians(latitude)) * np.cos(np.radians(longitude_))
-    y = (N + orthometric_height) * np.cos(np.radians(latitude)) * np.sin(np.radians(longitude_))
-    z = (N * (1 - e2) + orthometric_height) * np.sin(np.radians(latitude))
-    return {"x": x, "y": y, "z": z}
-
-# PROBLEMA INVERSO.
-# Calculo de (X,Y,Z) sobre la elipse meridiana. Se divide en 3 (Geodesica, Geocentrica y Parametrica).
-# 1). (Phi,Lambda, orthoMetric) = (X,Y,Z) - Geodesica.
-def calculate_xyz_from_geodesic(latitude, longitude, ellipsoid):
-    N = calculate_N(latitude, longitude, ellipsoid)
-    e2 = ellipsoid.e2
-    x = (N * np.cos(np.radians(latitude)) * np.cos(np.radians(longitude)))
-    y = (N * np.cos(np.radians(latitude)) * np.sin(np.radians(longitude)))
-    z = (N * np.sqrt(1 - e2 * np.sin(np.radians(latitude))**2))
-
-# # 2). (Rg,W,Lambda) = (X,Y,Z) - Geocentrica.
-# def calculate_xyz_from_geocentric(Rg, w, logitudeGeocentric):
+# Aqui nombre al primer verticcal N, a Radio Geocentrico Rg, o a "a" de la mimsa forma para ser mas dinamico, aqui estos 3
+#  se llaman Rho (p)
+    if coordinate_type == "Geodesic":
+        # rho aqui es N
+        rho_XY = calculate_N(latitude, ellipsoid)
+        Z = (rho_XY * (1 - e2) + orthometricHeight) * np.sin(latitude)
+    elif coordinate_type == "Geocentric":
+        # rho aqui es Rg
+        rho_XY = calculateRg(latitude, ellipsoid)
+        Z = (rho_XY + orthometricHeight) * np.sin(latitude)
+    elif coordinate_type == "Parametric":
+        # rho aqui es a o b, depende si es para XY o Z respectivamente.
+        rho_XY = a
+        rho_Z = b
+        Z = rho_Z * np.sin(latitude)
+    else:
+        raise ValueError("coordinate_type debe ser 'Geodesic' o 'Geocentric' o 'Parametric '")
+    X = (rho_XY + orthometricHeight) * np.cos(latitude) * np.cos(longitude)
+    Y = (rho_XY + orthometricHeight) * np.cos(latitude) * np.sin(longitude)
+    return X, Y, Z
+    
+    
+    
