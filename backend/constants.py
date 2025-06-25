@@ -17,7 +17,8 @@ ELLIPSOID_MODELS = {
 COORDINATES_TYPE = [
     "Geodesic",
     "Geocentric",
-    "Parametric"
+    "Parametric",
+    "GausKruger"
 ]
 
 MAGNA_ORIGINS = {

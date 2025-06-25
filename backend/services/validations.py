@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from constants import ELLIPSOID_MODELS
-from models import (EllipsoidAndTypeInput, geocentricCardCoord, GeodesicCoordinates, ParametricCoordinates)
+from models import (EllipsoidAndTypeInput, geocentricCardCoord, GeodesicCoordinates, ParametricCoordinates, GausKruger)
 
 # en proceso, no funciona aun 
 # def Ellipsoid(ellipsoid):
@@ -24,6 +24,9 @@ def validate_coordinates(data: EllipsoidAndTypeInput):
             result = coords.model_dump()
         elif data.coordinate_type == "Cartesian":
             coords = geocentricCardCoord(**data.coordinates)
+            result = coords.model_dump()
+        elif data.coordinate_type == "GausKruger":
+            coords = GausKruger(**data.coordinates)
             result = coords.model_dump()
         else:
             raise HTTPException(400, "Tipo de coordenada no válido")

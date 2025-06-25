@@ -25,7 +25,11 @@ class GeodesicCoordinates(BaseModel):
             return float(v)
         except Exception:
             raise ValueError("La coordenada debe ser decimal o en formato DMS")
-  
+
+class GausKruger(BaseModel):
+    nort_m: Optional[float] = Field(None, ge=1000000)
+    east_m: Optional[float] = Field(None, ge=1000000)
+
 class geocentricCardCoord(BaseModel):
     X: Optional[float] = Field(None, ge=-6_500_000, le=6_500_000)
     Y: Optional[float] = Field(None, ge=-6_500_000, le=6_500_000)
@@ -75,13 +79,13 @@ class ParametricCoordinates(BaseModel):
   
 class EllipsoidAndTypeInput(BaseModel):
     ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
-    coordinate_type: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian"]
+    coordinate_type: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian", "GausKruger"]
     system_reference: Optional[str] = Literal["magnaOrigins", "bogotaDatum"]
     coordinates: Dict[str, Any]
 
 class EllipsoidAndTypeToAnguleInput(BaseModel):
     ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
-    coordinate_type_want: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian"]
+    coordinate_type_want: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian", "GausKruger"]
     coordinates: Dict[str, Any]
 
     
