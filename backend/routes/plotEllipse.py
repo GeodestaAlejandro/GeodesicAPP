@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from constants import ELLIPSOID_MODELS
 from fastapi.responses import StreamingResponse
-from models import (EllipsoidAndTypeInput, EllipsoidAndTypeToAnguleInput, CartesianCoordinates, GeodesicCoordinates, ParametricCoordinates, dms_decimal)
+from models import (EllipsoidAndTypeInput, geocentricCardCoord, GeodesicCoordinates, ParametricCoordinates)
 from services.ellipsoidMeridian.geoCentricMeridian import xz_lat_geocentric
 from services.ellipsoidMeridian.geodesicMeridian import lat_geod_to_xz, xz_to_lat_geod
 from services.ellipsoidMeridian.parametricMeridian import theta_parametric_to_xz, xz_to_theta_parametric
@@ -22,7 +22,7 @@ async def plot_ellipse_coord(input: EllipsoidAndTypeInput):
         angle = coords.latitudeGeodesic
         x, z, N = lat_geod_to_xz(angle, ellipsoid)
     elif input.coordinate_type == "Geocentric":
-        coords = CartesianCoordinates(**input.coordinates)
+        coords = geocentricCardCoord(**input.coordinates)
         if coords.X is None or coords.Z is None:
             raise ValueError("Debe proporcionar 'X' y 'Z' para coordenadas geocéntricas")
         x = coords.X  
@@ -53,7 +53,7 @@ async def plot_ellipse_coord(input: EllipsoidAndTypeInput):
 # Falta verificar si los datos si se estan verificando bien con coords...
 @router.post("/plot-ellipse-with-XZ/")
 async def plot_ellipse(input: dict):
-    coords = CartesianCoordinates(**data.coordinates)
+    coords = geocentricCardCoord(**input.coordinates)
     X = input['coordinates']['X']
     Z = input['coordinates']['Z']
     ellipsoid = ELLIPSOID_MODELS.get(input['ellipsoid'])  

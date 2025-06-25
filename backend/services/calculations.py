@@ -19,6 +19,22 @@ def calculateRg(latitude, ellipsoid):
     print("Rg", Rg)
     return Rg
 
+def decimal_a_dms(decimal, tipo='lat'):  
+    # Extraer grados, minutos, segundos absolutos  
+    grados = int(decimal)  
+    minutos_dec = abs((decimal - grados) * 60)  
+    minutos = int(minutos_dec)  
+    segundos = (minutos_dec - minutos) * 60  
+  
+    # Determinar sufijo según signo y tipo de coordenada  
+    if tipo == 'lat':  
+        sufijo = 'N' if decimal >= 0 else 'S'  
+    else:  
+        sufijo = 'E' if decimal >= 0 else 'W'  
+  
+    # Formato con símbolos grados, minutos, segundos y sufijo  
+    return f"{abs(grados)}°{abs(minutos)}'{abs(segundos):.4f}\" {sufijo}"
+
 def geocentricGeodesic_from_parametric(a, b, e2, f, latitude):
     # Dada beta (latitud paramétrica), calcula phi (latitud geodésica)
     def geodesic_from_parametric(f, latitude):
@@ -70,7 +86,23 @@ def parametricGeodesic_from_geocentric(a, b, e2, latitude):
     beta = parametric_from_geocentric(a, b, e2, latitude)
     return phi, beta
 
-def XYZ_to_latitudeLongitude(X, Y, Z, a, e2, ellipsoid, coordinate_type):
+# def XYZ_to_latitudeLongitude(X, Y, Z, a, b, e2, ellipsoid):
+    
+#     e22 = e2 / (1 - e2)
+    
+#     V = np.atan((Z * a) / (np.sqrt(X**2 + Y**2) * b))
+    
+#     phi = np.atan((Z + (e22 * b * (np.sin(V))**3)) / (np.sqrt(X**2 + Y**2) - (e2 * a * (np.cos(V))**3)))
+    
+#     N = calculate_N(phi, ellipsoid)
+    
+#     lammbda = np.atan( Y / X )
+
+#     orthometricHeight = (np.sqrt(X**2 + Y**2) / np.cos(phi)) - N
+    
+#     return phi, lammbda, orthometricHeight
+
+def XYZ_to_latitudeLongitude(X, Y, Z, e2, ellipsoid):
     
      # Magnitud de la proyección en el plano XY  
     vp = np.sqrt(X**2 + Y**2)
@@ -88,7 +120,6 @@ def XYZ_to_latitudeLongitude(X, Y, Z, a, e2, ellipsoid, coordinate_type):
     h = 0
   
     while diff > eps:
-        h_prev = h
         h = vp / np.cos(phi) - N_sub1
         phi_prev = phi
         product = e2 * N_sub1 * np.sin(phi_prev)
@@ -96,10 +127,13 @@ def XYZ_to_latitudeLongitude(X, Y, Z, a, e2, ellipsoid, coordinate_type):
         diff = abs(phi - phi_prev)
 
     print("phi", math.degrees(phi))
-    phi = math.degrees(phi)
-    lon = math.degrees(lon)
+    lat = "lat"
+    lot = "lon"
+    phi = decimal_a_dms(math.degrees(phi), lat)
+    lon = decimal_a_dms(math.degrees(lon), lot)
     return phi, lon, h
 
+# revisada
 def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, ellipsoid, coordinate_type):
     # Aqui nombre al primer verticcal N, a Radio Geocentrico Rg, o a "a" de la mimsa forma para ser mas dinamico, aqui estos 3
     #  se llaman Rho (p)
@@ -107,6 +141,8 @@ def latitudeLongitude_to_XYZ(latitude, longitude, orthometricHeight, a, b, e2, e
         # rho aqui es N
         rho_XY = calculate_N(latitude, ellipsoid)
         Z = (rho_XY * (1 - e2) + orthometricHeight) * np.sin(latitude)
+        Za = (rho_XY * (1 - e2) + orthometricHeight) * np.sin(latitude)
+        print("diferencia entre ztas", Z, Za)
     elif coordinate_type == "Geocentric":
         # rho aqui es Rg
         rho_XY = calculateRg(latitude, ellipsoid)

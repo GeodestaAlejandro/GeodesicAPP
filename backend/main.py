@@ -1,12 +1,11 @@
 from typing import Any, Optional
 from fastapi import FastAPI, HTTPException  
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse  
-from constants import ELLIPSOID_MODELS
 from routes.plotEllipse import router as plotEllipse_router
 from routes.coordinatesMeridianEllipse import router as coordinatesMeridianEllipse_router
 from routes.coordinatesEllipsoid import router as coordinatesEllipsoid_router
-from models import (EllipsoidAndTypeInput, EllipsoidAndTypeToAnguleInput, CartesianCoordinates, GeodesicCoordinates, ParametricCoordinates, GeocentricCoordinates, dms_decimal)
+from routes.biseccion import router as biseccion_router
+from models import (EllipsoidAndTypeInput)
   
 app = FastAPI(
     title="Geodesic Calculator",
@@ -17,6 +16,7 @@ app = FastAPI(
 app.include_router(plotEllipse_router)
 app.include_router(coordinatesMeridianEllipse_router)
 app.include_router(coordinatesEllipsoid_router)
+app.include_router(biseccion_router)
 
 app.add_middleware(
     CORSMiddleware,

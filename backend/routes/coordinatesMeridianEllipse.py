@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Optional
 from constants import ELLIPSOID_MODELS
 from fastapi.responses import StreamingResponse
-from models import (EllipsoidAndTypeInput, EllipsoidAndTypeToAnguleInput, CartesianCoordinates, GeodesicCoordinates, ParametricCoordinates, dms_decimal)
+from models import (EllipsoidAndTypeInput, EllipsoidAndTypeToAnguleInput, geocentricCardCoord, GeodesicCoordinates, ParametricCoordinates, dms_decimal)
 from services.ellipsoidMeridian.geoCentricMeridian import xz_lat_geocentric
 from services.ellipsoidMeridian.geodesicMeridian import lat_geod_to_xz, xz_to_lat_geod
 from services.ellipsoidMeridian.parametricMeridian import theta_parametric_to_xz, xz_to_theta_parametric
@@ -22,7 +22,7 @@ def calculate_xz(data: EllipsoidAndTypeInput):
             latitudeGeodesic = coords.latitudeGeodesic
             X, Z, Rg = lat_geod_to_xz(latitudeGeodesic, ellipsoid)  
         elif data.coordinate_type == "Geocentric":  
-            coords = CartesianCoordinates(**data.coordinates)
+            coords = geocentricCardCoord(**data.coordinates)
             X = coords.X
             Z = coords.Z
             Rg = (X**2 + Z**2)**0.5  
@@ -44,7 +44,7 @@ def calculate_angules(data: EllipsoidAndTypeToAnguleInput):
         raise HTTPException(400, "Modelo de elipsoide no válido")
   
     try:
-        coords = CartesianCoordinates(**data.coordinates)  
+        coords = geocentricCardCoord(**data.coordinates)  
         X = coords.X
         Y = Optional[coords.Y]
         Z = coords.Z

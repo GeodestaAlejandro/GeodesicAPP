@@ -7,8 +7,8 @@ from services.calculations import XYZ_to_latitudeLongitude, latitudeLongitude_to
 
 router = APIRouter()
 
-# Contiene un modelo dinamico mucho mejor que calculate_angles
-# Como se cuadno el Y debe ser negativ?????????????????????????
+
+# Como se cuadno el Y debe ser negativo?????????????????????????
 @router.post("/calculate_xyz_with_angles/")
 def calculateXYZ(data: EllipsoidAndTypeInput):
     coordinates = validate_coordinates(data)
@@ -37,6 +37,7 @@ def calculateXYZ(data: EllipsoidAndTypeInput):
             
     return result
 
+# Modificado al documento oficial de geodesia. 
 @router.post("/calculate_angles_with_XYZ/")
 def calculateXYZ(data: EllipsoidAndTypeInput):
     coordinates = validate_coordinates(data)
@@ -50,8 +51,7 @@ def calculateXYZ(data: EllipsoidAndTypeInput):
     b = float(a * (1 - ellipsoid["f"]))
     f = ellipsoid['f']
     e2 = 2 * f - f ** 2
-    coordinate_type = data.coordinate_type
-    print("type", coordinate_type)
+    # print("Variables segun modelo de referencia", a, b, f, e2)
 
     X = coordinates['coordinates']['X']
     Y = coordinates['coordinates']['Y']
@@ -60,11 +60,11 @@ def calculateXYZ(data: EllipsoidAndTypeInput):
     if X and Y and Z is None:
         raise HTTPException(400, "Falta la latitud y longitud ")
     
-    phi, lambdaa, h = XYZ_to_latitudeLongitude(X, Y, Z, a, e2, ellipsoid, coordinate_type)
+    phi, lammbda, orthometricHeight = XYZ_to_latitudeLongitude(X, Y, Z, e2, ellipsoid)
     
     result["phi"] = phi
-    result["lambdaa"] = lambdaa
-    result["h"] = h
+    result["lambdaa"] = lammbda
+    result["h"] = orthometricHeight
             
     return result
         

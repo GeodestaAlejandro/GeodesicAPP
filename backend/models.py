@@ -21,37 +21,37 @@ class GeodesicCoordinates(BaseModel):
             return float(v)
         if isinstance(v, str) and "°" in v:
             return dms_decimal(v)
-        try:  
-            return float(v)  
-        except Exception:  
+        try:
+            return float(v)
+        except Exception:
             raise ValueError("La coordenada debe ser decimal o en formato DMS")
   
-class CartesianCoordinates(BaseModel):
-    X: Optional[float] = Field(None, ge=-1e8, le=1e8)
-    Y: Optional[float] = Field(None, ge=-1e8, le=1e8)
-    Z: Optional[float] = Field(None, ge=-1e8, le=1e8)
+class geocentricCardCoord(BaseModel):
+    X: Optional[float] = Field(None, ge=-6_500_000, le=6_500_000)
+    Y: Optional[float] = Field(None, ge=-6_500_000, le=6_500_000)
+    Z: Optional[float] = Field(None, ge=-6_500_000, le=6_500_000)
   
-    @validator('X', 'Y', 'Z', pre=True)  
-    def parse_numeric(cls, v):  
-        if isinstance(v, (float, int)):  
-            return float(v)  
-        try:  
-            return float(v)  
-        except Exception:  
+    @validator('X', 'Y', 'Z', pre=True)
+    def parse_numeric(cls, v):
+        if isinstance(v, (float, int)):
+            return float(v)
+        try:
+            return float(v)
+        except Exception:
             raise ValueError("Cada coordenada debe ser un número válido (float o int)")
-    
-class GeocentricCoordinates(BaseModel):
+        
+class GeocentricAngles(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90.0, le=90.0,)
     longitude: Optional[float] = Field(None, ge=-180.0, le=180.0,)
     orthometricHeight: Optional[float] = Field(None, ge=-500.0, le=10000.0, )
     
-    @validator('latitude', 'longitude', pre=True)  
-    def parse_dms_or_decimal(cls, v):  
-        if isinstance(v, (float, int)):  
-            return float(v)  
-        if isinstance(v, str) and "°" in v:  
-            return dms_decimal(v)  
-        try:  
+    @validator('latitude', 'longitude', pre=True)
+    def parse_dms_or_decimal(cls, v):
+        if isinstance(v, (float, int)):
+            return float(v)
+        if isinstance(v, str) and "°" in v:
+            return dms_decimal(v)
+        try:
             return float(v)  
         except Exception:  
             raise ValueError("La coordenada debe ser decimal o en formato DMS")
@@ -76,6 +76,7 @@ class ParametricCoordinates(BaseModel):
 class EllipsoidAndTypeInput(BaseModel):
     ellipsoid: Literal["WGS84", "GRS80", "WGS72"]
     coordinate_type: Literal["Geodesic", "Geocentric", "Parametric", "Cartesian"]
+    system_reference: Optional[str] = Literal["magnaOrigins", "bogotaDatum"]
     coordinates: Dict[str, Any]
 
 class EllipsoidAndTypeToAnguleInput(BaseModel):
