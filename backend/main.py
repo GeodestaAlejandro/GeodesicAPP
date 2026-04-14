@@ -1,10 +1,10 @@
 from typing import Any, Optional
 from fastapi import FastAPI, HTTPException  
 from fastapi.middleware.cors import CORSMiddleware
-from routes.plotEllipse import router as plotEllipse_router
-from routes.coordinatesMeridianEllipse import router as coordinatesMeridianEllipse_router
-from routes.coordinatesEllipsoid import router as coordinatesEllipsoid_router
-from routes.biseccion import router as biseccion_router
+from backend.api.routes.plotEllipse import router as plotEllipse_router
+from backend.api.routes.coordinatesMeridianEllipse import router as coordinatesMeridianEllipse_router
+from backend.api.routes.coordinatesEllipsoid import router as coordinatesEllipsoid_router
+from backend.api.routes.biseccion import router as biseccion_router
 from models import (EllipsoidAndTypeInput)
   
 app = FastAPI(
