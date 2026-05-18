@@ -7,6 +7,35 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
+import hmac
+import streamlit as st
+
+def require_login():
+    if st.session_state.get("authenticated", False):
+        return
+
+    st.title("Acceso privado")
+    st.write("Ingresa tu usuario y contraseña.")
+
+    with st.form("login_form"):
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        submitted = st.form_submit_button("Entrar")
+
+    if submitted:
+        users = st.secrets.get("users", {})
+        valid_password = users.get(username)
+
+        if valid_password and hmac.compare_digest(password, valid_password):
+            st.session_state["authenticated"] = True
+            st.session_state["username"] = username
+            st.rerun()
+        else:
+            st.error("Usuario o contraseña incorrectos.")
+
+    st.stop()
+
+require_login()
 
 # =========================
 # CONFIG APP
@@ -1070,6 +1099,13 @@ st.caption("Demo rápida standalone en Python. Salidas en grados y metros.")
 st.sidebar.header("Configuración")
 ellipsoid_name = st.sidebar.selectbox("Elipsoide", list(ELLIPSOIDS.keys()), index=0)
 ell = get_ellipsoid(ellipsoid_name)
+
+with st.sidebar:
+    if st.session_state.get("authenticated", False):
+        st.write(f"Sesión: {st.session_state.get('username', 'usuario')}")
+        if st.button("Cerrar sesión"):
+            st.session_state.clear()
+            st.rerun()
 
 module = st.sidebar.radio(
     "Módulo",
