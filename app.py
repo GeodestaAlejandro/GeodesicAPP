@@ -28,7 +28,6 @@ def require_login():
     if submitted:
         users_section = st.secrets.get("users", {})
         users = {str(k): str(v) for k, v in dict(users_section).items()}
-
         valid_password = users.get(username)
 
         if isinstance(valid_password, str) and hmac.compare_digest(password, valid_password):
