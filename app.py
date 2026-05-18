@@ -581,6 +581,118 @@ def geodetic_quadrilateral(
 # FIGURAS
 # =========================
 
+# =========================
+# FIGURAS
+# =========================
+
+def visual_height_for_plot(
+    h_m: float,
+    scale: float = 80.0,
+    min_visible: float = 15000.0,
+    max_visible: float = 250000.0,
+) -> float:
+    """
+    Exagera la altura solo para visualización.
+    No cambia el cálculo geodésico real.
+    """
+    if abs(h_m) < 1e-12:
+        return 0.0
+
+    sign = 1.0 if h_m >= 0.0 else -1.0
+    return sign * min(max(abs(h_m) * scale, min_visible), max_visible)
+
+
+def camera_from_point(x: float, y: float, z: float) -> dict:
+    v = np.array([x, y, z], dtype=float)
+    n = float(np.linalg.norm(v))
+
+    if n < 1e-12:
+        return dict(eye=dict(x=1.6, y=1.4, z=1.1))
+
+    u = v / n
+    z_axis = np.array([0.0, 0.0, 1.0], dtype=float)
+
+    side = np.cross(z_axis, u)
+    side_norm = float(np.linalg.norm(side))
+    if side_norm < 1e-12:
+        side = np.array([1.0, 0.0, 0.0], dtype=float)
+    else:
+        side = side / side_norm
+
+    up = np.cross(u, side)
+    up_norm = float(np.linalg.norm(up))
+    if up_norm > 1e-12:
+        up = up / up_norm
+    else:
+        up = np.array([0.0, 0.0, 1.0], dtype=float)
+
+    eye = 1.8 * u + 0.55 * side + 0.35 * up
+
+    return dict(
+        eye=dict(x=float(eye[0]), y=float(eye[1]), z=float(eye[2])),
+        up=dict(x=float(up[0]), y=float(up[1]), z=float(up[2])),
+        center=dict(x=0.0, y=0.0, z=0.0),
+    )
+
+
+def build_local_ellipsoid_patch(
+    lat_deg: float,
+    lon_deg: float,
+    ell: Ellipsoid,
+    span_lat_deg: float = 0.8,
+    samples: int = 60,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    span_lat_deg = max(0.15, float(span_lat_deg))
+    cos_lat = max(abs(math.cos(math.radians(lat_deg))), 0.20)
+    span_lon_deg = span_lat_deg / cos_lat
+
+    lat_vals = np.linspace(
+        max(-89.9, lat_deg - span_lat_deg),
+        min(89.9, lat_deg + span_lat_deg),
+        samples,
+    )
+    lon_vals = np.linspace(
+        lon_deg - span_lon_deg,
+        lon_deg + span_lon_deg,
+        samples,
+    )
+
+    lon_grid, lat_grid = np.meshgrid(lon_vals, lat_vals)
+    return geodetic_array_to_ecef(lat_grid, lon_grid, ell, h=0.0)
+
+
+def cube_ranges_from_arrays(
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
+    extra_points: list[tuple[float, float, float]] | None = None,
+) -> tuple[list[float], list[float], list[float]]:
+    xs = [float(np.min(x)), float(np.max(x))]
+    ys = [float(np.min(y)), float(np.max(y))]
+    zs = [float(np.min(z)), float(np.max(z))]
+
+    if extra_points:
+        xs.extend(float(p[0]) for p in extra_points)
+        ys.extend(float(p[1]) for p in extra_points)
+        zs.extend(float(p[2]) for p in extra_points)
+
+    xmin, xmax = min(xs), max(xs)
+    ymin, ymax = min(ys), max(ys)
+    zmin, zmax = min(zs), max(zs)
+
+    span = max(xmax - xmin, ymax - ymin, zmax - zmin, 1.0)
+    half = span * 0.62
+
+    xmid = 0.5 * (xmin + xmax)
+    ymid = 0.5 * (ymin + ymax)
+    zmid = 0.5 * (zmin + zmax)
+
+    return (
+        [xmid - half, xmid + half],
+        [ymid - half, ymid + half],
+        [zmid - half, zmid + half],
+    )
+
 def compute_axis_range(
     values: list[float],
     min_pad: float,
@@ -914,40 +1026,75 @@ def add_ellipsoid_surface(fig: go.Figure, ell: Ellipsoid, opacity: float = 0.60)
             name="Elipsoide",
         )
     )
+    
+def fig_point_local_zoom(lat: float, lon: float, h: float, ell: Ellipsoid, title: str) -> go.Figure:
+    patch_x, patch_y, patch_z = build_local_ellipsoid_patch(lat, lon, ell)
 
-
-def fig_point_on_ellipsoid(lat: float, lon: float, h: float, ell: Ellipsoid, title: str) -> go.Figure:
-    px, py, pz = geodetic_to_ecef(lat, lon, h, ell)
     sx, sy, sz = geodetic_to_ecef(lat, lon, 0.0, ell)
+    h_vis = visual_height_for_plot(
+        h,
+        scale=120.0,
+        min_visible=5000.0,
+        max_visible=150000.0,
+    )
+    px, py, pz = geodetic_to_ecef(lat, lon, h_vis, ell)
+
+    x_range, y_range, z_range = cube_ranges_from_arrays(
+        patch_x,
+        patch_y,
+        patch_z,
+        extra_points=[(sx, sy, sz), (px, py, pz)],
+    )
 
     fig = go.Figure()
-    add_ellipsoid_surface(fig, ell, opacity=0.62)
 
-    # Línea de altura desde la superficie al punto
+    fig.add_trace(
+        go.Surface(
+            x=patch_x,
+            y=patch_y,
+            z=patch_z,
+            surfacecolor=np.zeros_like(patch_x),
+            colorscale=[[0.0, "#dce6f2"], [1.0, "#8fb3d9"]],
+            showscale=False,
+            opacity=0.98,
+            hoverinfo="skip",
+            name="Superficie local del elipsoide",
+        )
+    )
+
     fig.add_trace(
         go.Scatter3d(
             x=[sx, px],
             y=[sy, py],
             z=[sz, pz],
             mode="lines",
-            line=dict(color="#ff7f0e", width=6, dash="dash"),
-            name="Altura h",
+            line=dict(color="#ff7f0e", width=10, dash="dash"),
+            name="Altura (visual)",
+            hovertemplate=(
+                f"h real: {h:,.3f} m<br>"
+                f"h visual: {h_vis:,.3f} m<extra></extra>"
+            ),
         )
     )
 
-    # Punto sobre superficie (h=0)
     fig.add_trace(
         go.Scatter3d(
             x=[sx],
             y=[sy],
             z=[sz],
-            mode="markers",
-            marker=dict(size=4, color="#2ca02c"),
-            name="Proyección en el elipsoide",
+            mode="markers+text",
+            text=["S"],
+            textposition="bottom center",
+            marker=dict(size=6, color="#2ca02c"),
+            name="Proyección",
+            hovertemplate=(
+                f"Lat: {lat:.8f}°<br>"
+                f"Lon: {lon:.8f}°<br>"
+                f"h: 0.000 m<extra></extra>"
+            ),
         )
     )
 
-    # Punto real
     fig.add_trace(
         go.Scatter3d(
             x=[px],
@@ -956,15 +1103,13 @@ def fig_point_on_ellipsoid(lat: float, lon: float, h: float, ell: Ellipsoid, tit
             mode="markers+text",
             text=["P"],
             textposition="top center",
-            marker=dict(size=6, color="crimson"),
+            marker=dict(size=8, color="crimson"),
             name="Punto",
             hovertemplate=(
                 f"Lat: {lat:.8f}°<br>"
                 f"Lon: {lon:.8f}°<br>"
-                f"h: {h:,.3f} m<br>"
-                f"X: {px:,.3f} m<br>"
-                f"Y: {py:,.3f} m<br>"
-                f"Z: {pz:,.3f} m<extra></extra>"
+                f"h real: {h:,.3f} m<br>"
+                f"h visual: {h_vis:,.3f} m<extra></extra>"
             ),
         )
     )
@@ -972,7 +1117,86 @@ def fig_point_on_ellipsoid(lat: float, lon: float, h: float, ell: Ellipsoid, tit
     fig.update_layout(
         title=title,
         template="plotly_white",
-        scene=ellipsoid_scene(ell),
+        scene=dict(
+            aspectmode="data",
+            xaxis=dict(title="X (m)", range=x_range),
+            yaxis=dict(title="Y (m)", range=y_range),
+            zaxis=dict(title="Z (m)", range=z_range),
+            camera=dict(eye=dict(x=1.35, y=1.25, z=0.90)),
+        ),
+        height=650,
+        margin=dict(l=0, r=0, t=60, b=0),
+    )
+    return fig
+
+
+def fig_point_on_ellipsoid(lat: float, lon: float, h: float, ell: Ellipsoid, title: str) -> go.Figure:
+    sx, sy, sz = geodetic_to_ecef(lat, lon, 0.0, ell)
+    h_vis = visual_height_for_plot(h)
+    px, py, pz = geodetic_to_ecef(lat, lon, h_vis, ell)
+
+    fig = go.Figure()
+    add_ellipsoid_surface(fig, ell, opacity=0.25)
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[sx, px],
+            y=[sy, py],
+            z=[sz, pz],
+            mode="lines",
+            line=dict(color="#ff7f0e", width=8, dash="dash"),
+            name="Altura (visual)",
+            hovertemplate=(
+                f"h real: {h:,.3f} m<br>"
+                f"h visual: {h_vis:,.3f} m<extra></extra>"
+            ),
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[sx],
+            y=[sy],
+            z=[sz],
+            mode="markers+text",
+            text=["S"],
+            textposition="bottom center",
+            marker=dict(size=5, color="#2ca02c"),
+            name="Proyección sobre el elipsoide",
+            hovertemplate=(
+                f"Lat: {lat:.8f}°<br>"
+                f"Lon: {lon:.8f}°<br>"
+                f"h: 0.000 m<extra></extra>"
+            ),
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[px],
+            y=[py],
+            z=[pz],
+            mode="markers+text",
+            text=["P"],
+            textposition="top center",
+            marker=dict(size=7, color="crimson"),
+            name="Punto",
+            hovertemplate=(
+                f"Lat: {lat:.8f}°<br>"
+                f"Lon: {lon:.8f}°<br>"
+                f"h real: {h:,.3f} m<br>"
+                f"h visual: {h_vis:,.3f} m<extra></extra>"
+            ),
+        )
+    )
+
+    scene = ellipsoid_scene(ell).copy()
+    scene["camera"] = camera_from_point(sx, sy, sz)
+
+    fig.update_layout(
+        title=title,
+        template="plotly_white",
+        scene=scene,
         height=650,
         margin=dict(l=0, r=0, t=60, b=0),
     )
@@ -1281,11 +1505,32 @@ elif module == "4. Cartesianas → Geodésicas":
             c4.metric("Iteraciones", str(iterations))
 
             left, right = st.columns(2)
-            with left:
+            tabs = st.tabs(["ECEF", "Elipsoide global", "Zoom local"])
+
+            with tabs[0]:
                 st.plotly_chart(
                     fig_ecef_point(x, y, z, "Punto cartesiano ECEF 3D"),
                     use_container_width=True,
                 )
+
+            with tabs[1]:
+                st.plotly_chart(
+                    fig_point_on_ellipsoid(lat, lon, h, ell, "Resultado geodésico sobre el elipsoide"),
+                    use_container_width=True,
+                )
+
+            with tabs[2]:
+                st.plotly_chart(
+                    fig_point_local_zoom(lat, lon, h, ell, "Zoom local: altura y proyección"),
+                    use_container_width=True,
+                )
+                if abs(h) > EPS:
+                    st.caption(
+                        f"Visualización con exageración vertical: h real = {h:,.3f} m, "
+                        f"h visual = {visual_height_for_plot(h):,.3f} m."
+                    )
+                else:
+                    st.caption("Como h = 0, el punto coincide exactamente con su proyección sobre el elipsoide.")
             with right:
                 st.plotly_chart(
                     fig_point_on_ellipsoid(lat, lon, h, ell, "Resultado geodésico sobre el elipsoide"),
