@@ -21,15 +21,17 @@ def require_login():
     st.write("Ingresa tu usuario y contraseña.")
 
     with st.form("login_form"):
-        username = st.text_input("Usuario")
+        username = st.text_input("Usuario").strip()
         password = st.text_input("Contraseña", type="password")
         submitted = st.form_submit_button("Entrar")
 
     if submitted:
-        users = st.secrets.get("users", {})
+        users_section = st.secrets.get("users", {})
+        users = {str(k): str(v) for k, v in dict(users_section).items()}
+
         valid_password = users.get(username)
 
-        if valid_password and hmac.compare_digest(password, valid_password):
+        if isinstance(valid_password, str) and hmac.compare_digest(password, valid_password):
             st.session_state["authenticated"] = True
             st.session_state["username"] = username
             st.rerun()
