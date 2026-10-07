@@ -575,7 +575,7 @@ def fig_geoide_3d_real(lat_pt=None, lon_pt=None, ell=None):
         ))
         
     fig.update_layout(
-        title="El Geoide Terrestre ('La Papa')",
+        title="Simulaciòn del Geoide Terrestre",
         scene=dict(
             xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
             aspectmode='data', camera=dict(eye=dict(x=1.3, y=1.3, z=0.6))
