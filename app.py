@@ -292,7 +292,7 @@ st.markdown("""
     <h1>🌍 Geodesia Lab</h1>
     <p>Plataforma interactiva para cálculos, transformaciones espaciales y geometría elipsoidal.</p>
 </div>
-""", unsafe_allow_html=False)
+""", unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -364,7 +364,7 @@ elif module == "7. Trisección y Bisección":
                 m1.metric("Norte P ($N_P$)", f"{np_coord:,.3f} m")
                 m2.metric("Este P ($E_P$)", f"{ep:,.3f} m")
                 pts = {"A": (ea, na), "B": (eb, nb), "C": (ec, nc), "Punto P (Calculado)": (ep, np_coord)}
-                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Trisección - {datum_tri}"), use_container_width=False)
+                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Trisección - {datum_tri}"), use_container_width=True)
             else:
                 st.error("Geometría colineal o ángulos inválidos.")
 
@@ -393,7 +393,7 @@ elif module == "7. Trisección y Bisección":
                 m1.metric("Norte P ($N_P$)", f"{np_coord:,.3f} m")
                 m2.metric("Este P ($E_P$)", f"{ep:,.3f} m")
                 pts = {"Estación A": (ea, na), "Estación B": (eb, nb), "Punto P (Calculado)": (ep, np_coord)}
-                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Bisección - {datum_bi}"), use_container_width=False)
+                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Bisección - {datum_bi}"), use_container_width=True)
             else:
                 st.error("Error geométrico en los ángulos o estaciones coincidentes.")
 
@@ -411,7 +411,7 @@ elif module == "8. Nivelación Diferencial Geodésica":
             "Cota_Inicial": [2600.0, 0.0, 0.0, 0.0, 0.0]
         })
 
-    df_edit = st.data_editor(st.session_state.df_nivelacion, num_rows="dynamic", use_container_width=False)
+    df_edit = st.data_editor(st.session_state.df_nivelacion, num_rows="dynamic", use_container_width=True)
 
     if st.button("Calcular Cartera y Perfil"):
         df = df_edit.copy()
@@ -445,5 +445,5 @@ elif module == "8. Nivelación Diferencial Geodésica":
         df["Distancia_Acumulada"] = df["Distancia_Armado"].cumsum()
 
         st.success("✅ Cálculos procesados correctamente.")
-        st.dataframe(df[["Punto", "Distancia_Acumulada", "Cota_Calc_SB", "Cota_Calc_HI"]], use_container_width=False)
-        st.plotly_chart(fig_perfil_elevacion(df), use_container_width=False)
+        st.dataframe(df[["Punto", "Distancia_Acumulada", "Cota_Calc_SB", "Cota_Calc_HI"]], use_container_width=True)
+        st.plotly_chart(fig_perfil_elevacion(df), use_container_width=True)
