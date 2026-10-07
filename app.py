@@ -319,7 +319,6 @@ with st.sidebar:
     st.markdown("---")
     st.caption(f"👤 **Usuario:** `{st.session_state.get('username', 'Demo')}`")
 
-
 # =========================
 # CONTENIDO POR MÓDULOS
 # =========================
@@ -330,6 +329,103 @@ if module == "1. Parámetros del Elipsoide":
     col1.metric("Semieje Mayor (a)", f"{ell.a:,.3f} m")
     col2.metric("Semieje Menor (b)", f"{ell.b:,.3f} m")
     col3.metric("Achatamiento (f)", f"{ell.f:.8f}")
+
+elif module == "2. Elipse Meridiana":
+    st.subheader("📈 Elipse Meridiana del Elipsoide")
+    st.markdown("Visualización de la sección meridiana principal con los semiejes $a$ y $b$.")
+    st.plotly_chart(fig_meridian_ellipse(ell), use_container_width=True)
+
+elif module == "3. Geodésicas → Cartesianas (ECEF)":
+    st.subheader("🌐 Conversión de Coordenadas Geodésicas a Cartesianas (ECEF)")
+    with st.form("form_geo_ecef"):
+        c1, c2, c3 = st.columns(3)
+        lat_in = c1.number_input("Latitud (°)", value=4.60971)
+        lon_in = c2.number_input("Longitud (°)", value=-74.08175)
+        h_in = c3.number_input("Altura elipsoidal h (m)", value=2600.0)
+        btn_g2e = st.form_submit_button("Calcular ECEF")
+
+    if btn_g2e:
+        phi = math.radians(lat_in)
+        lam = math.radians(lon_in)
+        N = prime_vertical_radius(phi, ell)
+        
+        X = (N + h_in) * math.cos(phi) * math.cos(lam)
+        Y = (N + h_in) * math.cos(phi) * math.sin(lam)
+        Z = (N * (1.0 - ell.e2) + h_in) * math.sin(phi)
+
+        st.success("✅ Transformación exitosa")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Coordenada X", f"{X:,.3f} m")
+        m2.metric("Coordenada Y", f"{Y:,.3f} m")
+        m3.metric("Coordenada Z", f"{Z:,.3f} m")
+
+elif module == "4. Cartesianas (ECEF) → Geodésicas":
+    st.subheader("🌐 Conversión de Cartesianas (ECEF) a Geodésicas")
+    with st.form("form_ecef_geo"):
+        c1, c2, c3 = st.columns(3)
+        X_in = c1.number_input("X (m)", value=1334812.0)
+        Y_in = c2.number_input("Y (m)", value=-6100557.0)
+        Z_in = c3.number_input("Z (m)", value=513524.0)
+        btn_e2g = st.form_submit_button("Calcular Geodésicas")
+
+    if btn_e2g:
+        # Método iterativo de Bowring
+        p = math.hypot(X_in, Y_in)
+        if p == 0:
+            st.error("Coordenadas X e Y inválidas.")
+        else:
+            theta = math.atan2(Z_in * ell.a, p * ell.b)
+            lat_rad = math.atan2(
+                Z_in + ell.ep2 * ell.b * math.sin(theta)**3,
+                p - ell.e2 * ell.a * math.cos(theta)**3
+            )
+            lon_rad = math.atan2(Y_in, X_in)
+            N = prime_vertical_radius(lat_rad, ell)
+            h = p / math.cos(lat_rad) - N
+
+            st.success("✅ Transformación exitosa")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Latitud", f"{math.degrees(lat_rad):.8f}°")
+            m2.metric("Longitud", f"{math.degrees(lon_rad):.8f}°")
+            m3.metric("Altura (h)", f"{h:,.3f} m")
+
+elif module == "5. Arco de Paralelo":
+    st.subheader("📏 Longitud de Arco de Paralelo")
+    with st.form("form_paralelo"):
+        c1, c2 = st.columns(2)
+        lat_par = c1.number_input("Latitud del paralelo (°)", value=4.6)
+        d_lon = c2.number_input("Diferencia de longitud Δλ (°)", value=1.0)
+        btn_par = st.form_submit_button("Calcular Arco")
+
+    if btn_par:
+        phi_r = math.radians(lat_par)
+        dl_r = math.radians(d_lon)
+        N = prime_vertical_radius(phi_r, ell)
+        arco = N * math.cos(phi_r) * dl_r
+        st.success("✅ Cálculo exitoso")
+        st.metric("Longitud del Arco de Paralelo", f"{arco:,.3f} m")
+
+elif module == "6. Cuadrilátero Geodésico y Área":
+    st.subheader("🟩 Cuadrilátero Geodésico y Cálculo de Área")
+    with st.form("form_cuadrilatero"):
+        c1, c2 = st.columns(2)
+        lat1 = c1.number_input("Latitud Min (°)", value=4.0)
+        lon1 = c1.number_input("Longitud Min (°)", value=-75.0)
+        lat2 = c2.number_input("Latitud Max (°)", value=5.0)
+        lon2 = c2.number_input("Longitud Max (°)", value=-74.0)
+        btn_quad = st.form_submit_button("Calcular Cuadrilátero")
+
+    if btn_quad:
+        res = geodetic_quadrilateral(lat1, lon1, lat2, lon2, ell)
+        st.success("✅ Cálculo geodésico exitoso")
+        m1, m2 = st.columns(2)
+        m1.metric("Área", f"{res['area_km2']:,.3f} km²")
+        m2.metric("Área en m²", f"{res['area_m2']:,.3f} m²")
+        st.write("Dimensiones de los lados:", {
+            "Paralelo Sur": f"{res['south_parallel_length']:,.3f} m",
+            "Paralelo Norte": f"{res['north_parallel_length']:,.3f} m",
+            "Meridianos": f"{res['west_meridian_length']:,.3f} m"
+        })
 
 elif module == "7. Trisección y Bisección":
     st.subheader("📍 Trisección y Bisección Topográfica")
@@ -399,7 +495,7 @@ elif module == "7. Trisección y Bisección":
 
 elif module == "8. Nivelación Diferencial Geodésica":
     st.subheader("📏 Nivelación Diferencial Geodésica")
-    st.markdown("Ingresa los datos de la cartera topográfica[cite: 1].")
+    st.markdown("Ingresa los datos de la cartera topográfica.")
 
     if "df_nivelacion" not in st.session_state:
         st.session_state.df_nivelacion = pd.DataFrame({
