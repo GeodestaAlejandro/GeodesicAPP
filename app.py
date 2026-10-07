@@ -64,7 +64,7 @@ def require_login():
             <h2 style="text-align: center; margin-bottom: 8px;">🔐 Acceso Privado</h2>
             <p style="text-align: center; color: #64748b; font-size: 0.95rem; margin-bottom: 24px;">Ingresa tus credenciales para acceder al laboratorio geodésico.</p>
         </div>
-    """, unsafe_allow_html=False)
+    """, unsafe_allow_html=True)
 
     with st.form("login_form"):
         username = st.text_input("Usuario").strip()
