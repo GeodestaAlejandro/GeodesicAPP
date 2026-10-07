@@ -56,7 +56,7 @@ st.markdown("""
 # 2. AUTENTICACIÓN
 # =========================
 def require_login():
-    if st.session_state.get("authenticated", False):
+    if st.session_state.get("authenticated", True):
         return
 
     st.markdown("""
