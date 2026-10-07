@@ -8,8 +8,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import hmac
+import os
+import urllib.request
+import tarfile
 from geographiclib.geoid import Geoid
-
 # =========================================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS (FRONTEND AMIGABLE)
 # =========================================================
@@ -444,9 +446,31 @@ def fig_perfil_elevacion(df):
                       yaxis_title="Cota (m.s.n.m.)", template="plotly_white", height=450)
     return fig
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def load_geoid():
-    return Geoid('egm2008-5')
+    # Definimos dónde guardará Streamlit Cloud los archivos de la malla
+    geoids_dir = os.path.join(os.getcwd(), 'geoids')
+    model_name = 'egm2008-5'
+    model_file = os.path.join(geoids_dir, f"{model_name}.pgm")
+    
+    # Si el archivo no existe en el servidor de la nube, lo descargamos
+    if not os.path.exists(model_file):
+        with st.spinner("🌍 Descargando modelo EGM2008 (40MB) en el servidor... Esto tomará unos segundos (solo ocurre la primera vez)."):
+            url = f"https://sourceforge.net/projects/geographiclib/files/geoids-distrib/{model_name}.tar.bz2/download"
+            tar_path = os.path.join(os.getcwd(), f"{model_name}.tar.bz2")
+            
+            # Descargar archivo
+            urllib.request.urlretrieve(url, tar_path)
+            
+            # Extraer el contenido (geographiclib por defecto extrae en una carpeta 'geoids')
+            with tarfile.open(tar_path, "r:bz2") as tar:
+                tar.extractall(path=os.getcwd())
+                
+            # Limpiar el archivo comprimido para ahorrar RAM/Disco en la nube
+            os.remove(tar_path)
+            
+    # Le indicamos a geographiclib que busque en la carpeta local recién creada
+    return Geoid(model_name, path=geoids_dir)
 
 def fig_geoide_3d_real(lat_pt=None, lon_pt=None, ell=None):
     geoid = load_geoid()
