@@ -11,8 +11,13 @@ import hmac
 import os
 import urllib.request
 import tarfile
-from geographiclib.geoid import Geoid
 
+# --- IMPORTACIÓN SEGURA PARA EVITAR CAÍDAS EN LA NUBE ---
+try:
+    from geographiclib.geoid import Geoid
+    HAS_GEOGRAPHICLIB = True
+except ImportError:
+    HAS_GEOGRAPHICLIB = False
 # =========================================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS (FRONTEND AMIGABLE)
 # =========================================================
