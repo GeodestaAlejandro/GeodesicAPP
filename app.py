@@ -49,7 +49,7 @@ st.markdown("""
     section[data-testid="stSidebar"] span, 
     section[data-testid="stSidebar"] label { color: #f1f5f9 !important; }
 </style>
-""", unsafe_allow_html=False)
+""", unsafe_allow_html=True)
 
 
 # =========================
@@ -106,7 +106,7 @@ ELLIPSOIDS = {
 
 MARGIN_HEIGHT = 10000.0
 
-@dataclass(frozen=False)
+@dataclass(frozen=True)
 class Ellipsoid:
     name: str
     a: float
