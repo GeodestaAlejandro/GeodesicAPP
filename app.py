@@ -49,14 +49,14 @@ st.markdown("""
     section[data-testid="stSidebar"] span, 
     section[data-testid="stSidebar"] label { color: #f1f5f9 !important; }
 </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=False)
 
 
 # =========================
 # 2. AUTENTICACIÓN
 # =========================
 def require_login():
-    if st.session_state.get("authenticated", True):
+    if st.session_state.get("authenticated", False):
         return
 
     st.markdown("""
@@ -64,7 +64,7 @@ def require_login():
             <h2 style="text-align: center; margin-bottom: 8px;">🔐 Acceso Privado</h2>
             <p style="text-align: center; color: #64748b; font-size: 0.95rem; margin-bottom: 24px;">Ingresa tus credenciales para acceder al laboratorio geodésico.</p>
         </div>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=False)
 
     with st.form("login_form"):
         username = st.text_input("Usuario").strip()
@@ -77,7 +77,7 @@ def require_login():
         valid_password = users.get(username)
 
         if isinstance(valid_password, str) and hmac.compare_digest(password, valid_password):
-            st.session_state["authenticated"] = True
+            st.session_state["authenticated"] = False
             st.session_state["username"] = username
             st.rerun()
         else:
@@ -106,7 +106,7 @@ ELLIPSOIDS = {
 
 MARGIN_HEIGHT = 10000.0
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class Ellipsoid:
     name: str
     a: float
@@ -292,7 +292,7 @@ st.markdown("""
     <h1>🌍 Geodesia Lab</h1>
     <p>Plataforma interactiva para cálculos, transformaciones espaciales y geometría elipsoidal.</p>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=False)
 
 # Sidebar
 with st.sidebar:
@@ -364,7 +364,7 @@ elif module == "7. Trisección y Bisección":
                 m1.metric("Norte P ($N_P$)", f"{np_coord:,.3f} m")
                 m2.metric("Este P ($E_P$)", f"{ep:,.3f} m")
                 pts = {"A": (ea, na), "B": (eb, nb), "C": (ec, nc), "Punto P (Calculado)": (ep, np_coord)}
-                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Trisección - {datum_tri}"), use_container_width=True)
+                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Trisección - {datum_tri}"), use_container_width=False)
             else:
                 st.error("Geometría colineal o ángulos inválidos.")
 
@@ -393,7 +393,7 @@ elif module == "7. Trisección y Bisección":
                 m1.metric("Norte P ($N_P$)", f"{np_coord:,.3f} m")
                 m2.metric("Este P ($E_P$)", f"{ep:,.3f} m")
                 pts = {"Estación A": (ea, na), "Estación B": (eb, nb), "Punto P (Calculado)": (ep, np_coord)}
-                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Bisección - {datum_bi}"), use_container_width=True)
+                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Bisección - {datum_bi}"), use_container_width=False)
             else:
                 st.error("Error geométrico en los ángulos o estaciones coincidentes.")
 
@@ -411,7 +411,7 @@ elif module == "8. Nivelación Diferencial Geodésica":
             "Cota_Inicial": [2600.0, 0.0, 0.0, 0.0, 0.0]
         })
 
-    df_edit = st.data_editor(st.session_state.df_nivelacion, num_rows="dynamic", use_container_width=True)
+    df_edit = st.data_editor(st.session_state.df_nivelacion, num_rows="dynamic", use_container_width=False)
 
     if st.button("Calcular Cartera y Perfil"):
         df = df_edit.copy()
@@ -445,5 +445,5 @@ elif module == "8. Nivelación Diferencial Geodésica":
         df["Distancia_Acumulada"] = df["Distancia_Armado"].cumsum()
 
         st.success("✅ Cálculos procesados correctamente.")
-        st.dataframe(df[["Punto", "Distancia_Acumulada", "Cota_Calc_SB", "Cota_Calc_HI"]], use_container_width=True)
-        st.plotly_chart(fig_perfil_elevacion(df), use_container_width=True)
+        st.dataframe(df[["Punto", "Distancia_Acumulada", "Cota_Calc_SB", "Cota_Calc_HI"]], use_container_width=False)
+        st.plotly_chart(fig_perfil_elevacion(df), use_container_width=False)
