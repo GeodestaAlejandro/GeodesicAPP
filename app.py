@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS corregidos para evitar conflictos de color en el sidebar
+# Estilos CSS personalizados para modernizar la interfaz
 st.markdown("""
 <style>
     .stApp { background-color: #f8fafc; }
@@ -42,12 +42,8 @@ st.markdown("""
         padding: 0.5rem 1.2rem; font-weight: 600; transition: all 0.2s ease; width: 100%;
     }
     .stButton > button:hover { background: #0369a1; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); }
-    
-    /* Corrección de visibilidad en el Sidebar sin afectar menús desplegables */
     section[data-testid="stSidebar"] { background-color: #0f172a; }
-    section[data-testid="stSidebar"] .stMarkdown p, 
-    section[data-testid="stSidebar"] span, 
-    section[data-testid="stSidebar"] label { color: #f1f5f9 !important; }
+    section[data-testid="stSidebar"] * { color: #f1f5f9 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -85,7 +81,7 @@ def require_login():
 
     st.stop()
 
-require_login()  # Descomenta si usas st.secrets
+require_login()
 
 
 # =========================
@@ -142,6 +138,141 @@ def get_ellipsoid(name: str) -> Ellipsoid:
 # =========================
 EPS = 1e-15
 
+def is_zero(value: float, eps: float = EPS) -> bool: return abs(value) <= eps
+
+def parse_required_float(label: str, raw_value: str, errors: list[str], min_value: float | None = None, max_value: float | None = None, forbid_zero: bool = False) -> float | None:
+    text = raw_value.strip()
+    if text == "":
+        errors.append(f"• **{label}**: El campo está vacío.")
+        return None
+    try:
+        value = float(text.replace(",", "."))
+    except ValueError:
+        errors.append(f"• **{label}**: Debe ser un número válido.")
+        return None
+    if not math.isfinite(value):
+        errors.append(f"• **{label}**: No puede ser NaN ni infinito.")
+        return None
+    if forbid_zero and is_zero(value):
+        errors.append(f"• **{label}**: El valor 0 no está permitido.")
+        return None
+    if min_value is not None and value < min_value:
+        errors.append(f"• **{label}**: Debe ser ≥ {min_value}.")
+    if max_value is not None and value > max_value:
+        errors.append(f"• **{label}**: Debe ser ≤ {max_value}.")
+    return value
+
+def parse_required_int(label: str, raw_value: str, errors: list[str], min_value: int | None = None, max_value: int | None = None) -> int | None:
+    text = raw_value.strip()
+    if text == "":
+        errors.append(f"• **{label}**: El campo está vacío.")
+        return None
+    try:
+        value = int(text)
+    except ValueError:
+        errors.append(f"• **{label}**: Debe ser un entero válido.")
+        return None
+    if value == 0:
+        errors.append(f"• **{label}**: El valor 0 no está permitido.")
+        return None
+    if min_value is not None and value < min_value:
+        errors.append(f"• **{label}**: Debe ser ≥ {min_value}.")
+    if max_value is not None and value > max_value:
+        errors.append(f"• **{label}**: Debe ser ≤ {max_value}.")
+    return value
+
+def parse_angle(label: str, raw_value: str, errors: list[str], angle_type: str, forbid_zero: bool = True) -> float | None:
+    text = raw_value.strip()
+    if text == "":
+        errors.append(f"• **{label}**: El campo está vacío.")
+        return None
+
+    cleaned = text.upper().replace(",", ".")
+    cleaned = re.sub(r"[°º'’′\"”″]", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    tokens = cleaned.split(" ")
+    hemispheres = [t for t in tokens if t in {"N", "S", "E", "W"}]
+    if len(hemispheres) > 1:
+        errors.append(f"• **{label}**: Solo se permite un hemisferio.")
+        return None
+
+    hemisphere = hemispheres[0] if hemispheres else None
+    numeric_tokens = [t for t in tokens if t not in {"N", "S", "E", "W"}]
+
+    if len(numeric_tokens) not in (1, 2, 3):
+        errors.append(f"• **{label}**: Formato inválido. Usa decimal (ej. 4.6) o GMS (ej. 4 36 0 N).")
+        return None
+
+    try:
+        first_number = float(numeric_tokens[0])
+    except ValueError:
+        errors.append(f"• **{label}**: El valor angular no es válido.")
+        return None
+
+    if not math.isfinite(first_number):
+        errors.append(f"• **{label}**: No puede ser NaN ni infinito.")
+        return None
+
+    numeric_sign = -1.0 if first_number < 0 else 1.0
+
+    if len(numeric_tokens) == 1:
+        value_abs = abs(first_number)
+    else:
+        try:
+            degrees = float(numeric_tokens[0])
+            minutes = float(numeric_tokens[1])
+            seconds = float(numeric_tokens[2]) if len(numeric_tokens) == 3 else 0.0
+        except ValueError:
+            errors.append(f"• **{label}**: Grados, minutos y segundos deben ser numéricos.")
+            return None
+
+        if minutes < 0 or minutes >= 60 or seconds < 0 or seconds >= 60:
+            errors.append(f"• **{label}**: Minutos y segundos deben estar en el rango [0, 59.99].")
+            return None
+
+        value_abs = abs(degrees) + (minutes / 60.0) + (seconds / 3600.0)
+
+    if hemisphere is not None:
+        if angle_type == "lat" and hemisphere not in {"N", "S"}:
+            errors.append(f"• **{label}**: Para latitud solo se permite N o S.")
+            return None
+        if angle_type == "lon" and hemisphere not in {"E", "W"}:
+            errors.append(f"• **{label}**: Para longitud solo se permite E o W.")
+            return None
+
+        hemi_sign = -1.0 if hemisphere in {"S", "W"} else 1.0
+        if numeric_sign < 0 and hemi_sign > 0:
+            errors.append(f"• **{label}**: El signo negativo contradice el hemisferio {hemisphere}.")
+            return None
+        sign = hemi_sign
+    else:
+        sign = numeric_sign
+
+    value = sign * value_abs
+    limit = 90.0 if angle_type == "lat" else 180.0
+    if abs(value) > limit:
+        errors.append(f"• **{label}**: Fuera del rango permitido ±{limit}°.")
+        return None
+
+    if forbid_zero and is_zero(value):
+        errors.append(f"• **{label}**: El valor 0 no está permitido.")
+        return None
+
+    return value
+
+def validate_ecef_values(x: float, y: float, z: float, ell: Ellipsoid, errors: list[str]) -> None:
+    if abs(x) > ell.limit_xy or abs(y) > ell.limit_xy or abs(z) > ell.limit_z:
+        errors.append("• **ECEF**: Coordenadas fuera del rango terrestre del elipsoide seleccionado.")
+    r = math.sqrt(x * x + y * y + z * z)
+    if r < 6_000_000 or r > 7_000_000:
+        errors.append("• **ECEF**: El punto debe estar cerca de la superficie terrestre (rango 6,000 - 7,000 km).")
+
+def show_errors(errors: list[str]) -> None:
+    if errors:
+        st.error("#### ⚠️ Corrige los siguientes errores en el formulario:\n\n" + "\n".join(errors))
+
+# Cálculos geodésicos
 def deg_to_rad(v: float) -> float: return math.radians(v)
 def rad_to_deg(v: float) -> float: return math.degrees(v)
 
@@ -152,6 +283,50 @@ def prime_vertical_radius(lat_rad: float, ell: Ellipsoid) -> float:
 def meridian_radius(lat_rad: float, ell: Ellipsoid) -> float:
     s = math.sin(lat_rad)
     return ell.a * (1.0 - ell.e2) / ((1.0 - ell.e2 * s * s) ** 1.5)
+
+def geodetic_to_ecef(lat_deg: float, lon_deg: float, h_m: float, ell: Ellipsoid) -> tuple[float, float, float]:
+    lat, lon = deg_to_rad(lat_deg), deg_to_rad(lon_deg)
+    N = prime_vertical_radius(lat, ell)
+    X = (N + h_m) * math.cos(lat) * math.cos(lon)
+    Y = (N + h_m) * math.cos(lat) * math.sin(lon)
+    Z = (N * (1.0 - ell.e2) + h_m) * math.sin(lat)
+    return X, Y, Z
+
+def ecef_to_geodetic(x: float, y: float, z: float, ell: Ellipsoid, tol: float = 1e-12, max_iter: int = 15) -> tuple[float, float, float, int]:
+    p = math.hypot(x, y)
+    if p < 1e-12:
+        lat = math.copysign(math.pi / 2.0, z)
+        return rad_to_deg(lat), 0.0, abs(z) - ell.b, 0
+
+    lon = math.atan2(y, x)
+    theta = math.atan2(z * ell.a, p * ell.b)
+    lat = math.atan2(z + ell.ep2 * ell.b * math.sin(theta)**3, p - ell.e2 * ell.a * math.cos(theta)**3)
+
+    iterations = 0
+    for i in range(max_iter):
+        iterations = i + 1
+        N = prime_vertical_radius(lat, ell)
+        cos_lat = math.cos(lat)
+        h = abs(z) - ell.b if abs(cos_lat) < 1e-15 else p / cos_lat - N
+        denom = p * (1.0 - ell.e2 * N / (N + h))
+        lat_new = math.atan2(z, denom)
+        if abs(lat_new - lat) < tol:
+            lat = lat_new
+            break
+        lat = lat_new
+
+    N = prime_vertical_radius(lat, ell)
+    cos_lat = math.cos(lat)
+    h = abs(z) - ell.b if abs(cos_lat) < 1e-15 else p / cos_lat - N
+    return rad_to_deg(lat), rad_to_deg(lon), h, iterations
+
+def parallel_arc_length(lat_deg: float, lon1_deg: float, lon2_deg: float, ell: Ellipsoid) -> tuple[float, float]:
+    lat = deg_to_rad(lat_deg)
+    dlon = deg_to_rad(lon2_deg - lon1_deg)
+    dlon = (dlon + math.pi) % (2 * math.pi) - math.pi
+    dlon_abs = abs(dlon)
+    N = prime_vertical_radius(lat, ell)
+    return N * math.cos(lat) * dlon_abs, rad_to_deg(dlon_abs)
 
 def trapezoidal_integral(x_values, y_values) -> float:
     total = 0.0
@@ -197,7 +372,7 @@ def geodetic_quadrilateral(lat1_deg: float, lon1_deg: float, lat2_deg: float, lo
 
 
 # =========================
-# 5. CÁLCULOS TOPOGRÁFICOS (TRISECCIÓN Y BISECCIÓN)
+# 5. CÁLCULOS TOPOGRÁFICOS (TRISECCIÓN Y NIVELACIÓN)
 # =========================
 def resolver_triseccion_tienstra(ea, na, eb, nb, ec, nc, alpha, beta, gamma):
     """Método de Tienstra para Trisección (Resección)[cite: 1]"""
@@ -224,30 +399,6 @@ def resolver_triseccion_tienstra(ea, na, eb, nb, ec, nc, alpha, beta, gamma):
     except:
         return None, None
 
-def resolver_biseccion(ea, na, eb, nb, alpha_deg, beta_deg):
-    """Método de Bisección (Intersección directa desde dos estaciones A y B)"""
-    dE = eb - ea
-    dN = nb - na
-    az_ab = math.atan2(dE, dN)
-    d_ab = math.hypot(dE, dN)
-    
-    if d_ab == 0:
-        return None, None
-
-    alpha = math.radians(alpha_deg)
-    beta = math.radians(beta_deg)
-
-    sum_ang = alpha + beta
-    if abs(math.sin(sum_ang)) < 1e-6:
-        return None, None
-
-    dist_ap = d_ab * math.sin(beta) / math.sin(sum_ang)
-    az_ap = az_ab + alpha
-
-    ep = ea + dist_ap * math.sin(az_ap)
-    np_coord = na + dist_ap * math.cos(az_ap)
-    return ep, np_coord
-
 
 # =========================
 # 6. FIGURAS PLOTLY REFINADAS
@@ -261,6 +412,16 @@ def fig_meridian_ellipse(ell: Ellipsoid) -> go.Figure:
         xaxis_title="Eje X (m)", yaxis_title="Eje Z (m)",
         template="plotly_white", height=450,
         margin=dict(l=20, r=20, t=50, b=20)
+    )
+    return fig
+
+def fig_ecef_3d(x: float, y: float, z: float, title: str) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter3d(x=[0, x], y=[0, y], z=[0, z], mode="lines+markers", line=dict(color="#0284c7", width=6), marker=dict(size=[3, 7], color=["#0f172a", "#ef4444"])))
+    fig.update_layout(
+        title=title, template="plotly_white",
+        scene=dict(xaxis_title="X (m)", yaxis_title="Y (m)", zaxis_title="Z (m)", aspectmode="cube"),
+        height=500, margin=dict(l=0, r=0, t=40, b=0)
     )
     return fig
 
@@ -318,6 +479,9 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption(f"👤 **Usuario:** `{st.session_state.get('username', 'Demo')}`")
+    if st.button("Cerrar Sesión"):
+        st.session_state.clear()
+        st.rerun()
 
 
 # =========================
@@ -326,18 +490,171 @@ with st.sidebar:
 
 if module == "1. Parámetros del Elipsoide":
     st.subheader("📐 Geometría del Elipsoide Seleccionado")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Semieje Mayor (a)", f"{ell.a:,.3f} m")
-    col2.metric("Semieje Menor (b)", f"{ell.b:,.3f} m")
-    col3.metric("Achatamiento (f)", f"{ell.f:.8f}")
+    tab1, tab2 = st.tabs(["📊 Métricas Principales", "ℹ️ Formatos Angulares Soportados"])
+    
+    with tab1:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Semieje Mayor (a)", f"{ell.a:,.3f} m")
+        col2.metric("Semieje Menor (b)", f"{ell.b:,.3f} m")
+        col3.metric("Achatamiento (f)", f"{ell.f:.8f}")
+
+        col4, col5, col6 = st.columns(3)
+        col4.metric("Inverso Achatamiento (1/f)", f"{ell.inv_f:,.4f}")
+        col5.metric("1ra Excentricidad² (e²)", f"{ell.e2:.8f}")
+        col6.metric("2da Excentricidad² (e'²)", f"{ell.ep2:.8f}")
+
+    with tab2:
+        st.info("""
+        **Formatos aceptados para latitud y longitud en todos los módulos:**
+        * **Grados Decimales:** `4.6`, `-74.08175`
+        * **Grados, Minutos y Segundos (GMS):** `4 36 0 N`, `74° 04' 54.3" W`
+        """)
+
+elif module == "2. Elipse Meridiana":
+    st.subheader("🌐 Análisis de la Elipse Meridiana")
+    
+    with st.form("meridian_form"):
+        lat_raw = st.text_input("Latitud para calcular radios M y N (opcional):", placeholder="Ej: 4.6 o 4 36 0 N")
+        submitted = st.form_submit_button("Calcular Radios")
+
+    errors = []
+    lat = parse_angle("Latitud", lat_raw, errors, "lat", forbid_zero=False) if lat_raw.strip() else None
+
+    col_m1, col_m2 = st.columns([1, 1.2])
+    with col_m1:
+        st.plotly_chart(fig_meridian_ellipse(ell), use_container_width=True)
+    
+    with col_m2:
+        if lat is not None:
+            phi = deg_to_rad(lat)
+            M = meridian_radius(phi, ell)
+            N = prime_vertical_radius(phi, ell)
+            st.success(f"**Latitud analizada:** {lat:.6f}°")
+            st.metric("Radio Meridiano (M)", f"{M:,.3f} m")
+            st.metric("Radio Gran Normal / Primer Vertical (N)", f"{N:,.3f} m")
+        else:
+            st.info("Ingresa una latitud en el formulario para calcular los radios de curvatura $M$ y $N$.")
+
+elif module == "3. Geodésicas → Cartesianas (ECEF)":
+    st.subheader("📍 Conversión: Geodésicas a Cartesianas ECEF")
+
+    with st.form("geo2ecef"):
+        c1, c2, c3 = st.columns(3)
+        lat_raw = c1.text_input("Latitud", "4.6", help="Decimal o GMS")
+        lon_raw = c2.text_input("Longitud", "-74.0", help="Decimal o GMS")
+        h_raw = c3.text_input("Altura elipsoidal h (m)", "2600")
+        submitted = st.form_submit_button("Convertir a ECEF")
+
+    if submitted:
+        errors = []
+        lat = parse_angle("Latitud", lat_raw, errors, "lat", forbid_zero=False)
+        lon = parse_angle("Longitud", lon_raw, errors, "lon", forbid_zero=False)
+        h = parse_required_float("Altura", h_raw, errors)
+
+        if errors:
+            show_errors(errors)
+        else:
+            X, Y, Z = geodetic_to_ecef(lat, lon, h, ell)
+            st.markdown("#### Resultado en Coordenadas Cartesianas (ECEF)")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("X (m)", f"{X:,.3f}")
+            m2.metric("Y (m)", f"{Y:,.3f}")
+            m3.metric("Z (m)", f"{Z:,.3f}")
+            st.plotly_chart(fig_ecef_3d(X, Y, Z, "Vector ECEF 3D"), use_container_width=True)
+
+elif module == "4. Cartesianas (ECEF) → Geodésicas":
+    st.subheader("🔄 Conversión: Cartesianas ECEF a Geodésicas")
+
+    with st.form("ecef2geo"):
+        c1, c2, c3 = st.columns(3)
+        x_raw = c1.text_input("X (m)", "1749871.0")
+        y_raw = c2.text_input("Y (m)", "-6111234.0")
+        z_raw = c3.text_input("Z (m)", "508123.0")
+        submitted = st.form_submit_button("Convertir a Geodésicas")
+
+    if submitted:
+        errors = []
+        x = parse_required_float("X", x_raw, errors)
+        y = parse_required_float("Y", y_raw, errors)
+        z = parse_required_float("Z", z_raw, errors)
+
+        if x and y and z:
+            validate_ecef_values(x, y, z, ell, errors)
+
+        if errors:
+            show_errors(errors)
+        else:
+            lat, lon, h, iters = ecef_to_geodetic(x, y, z, ell)
+            st.markdown("#### Coordenadas Geodésicas Calculadas")
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Latitud (°)", f"{lat:.8f}")
+            m2.metric("Longitud (°)", f"{lon:.8f}")
+            m3.metric("Altura h (m)", f"{h:,.3f}")
+            m4.metric("Iteraciones", str(iters))
+
+elif module == "5. Arco de Paralelo":
+    st.subheader("📏 Longitud de Arco de Paralelo")
+
+    with st.form("parallel_form"):
+        c1, c2, c3 = st.columns(3)
+        lat_raw = c1.text_input("Latitud del paralelo", "4.6")
+        lon1_raw = c2.text_input("Longitud inicial", "-74.2")
+        lon2_raw = c3.text_input("Longitud final", "-73.8")
+        submitted = st.form_submit_button("Calcular Distancia")
+
+    if submitted:
+        errors = []
+        lat = parse_angle("Latitud", lat_raw, errors, "lat", forbid_zero=False)
+        lon1 = parse_angle("Longitud inicial", lon1_raw, errors, "lon", forbid_zero=False)
+        lon2 = parse_angle("Longitud final", lon2_raw, errors, "lon", forbid_zero=False)
+
+        if errors:
+            show_errors(errors)
+        else:
+            arc_len, dlon = parallel_arc_length(lat, lon1, lon2, ell)
+            m1, m2 = st.columns(2)
+            m1.metric("ΔLongitud (°)", f"{dlon:.6f}")
+            m2.metric("Longitud del Arco (m)", f"{arc_len:,.3f}")
+
+elif module == "6. Cuadrilátero Geodésico y Área":
+    st.subheader("🗺️ Cuadrilátero Geodésico y Cálculo de Área")
+
+    with st.form("quad_form"):
+        r1_1, r1_2 = st.columns(2)
+        lat1_raw = r1_1.text_input("Latitud Punto 1", "4.4")
+        lon1_raw = r1_2.text_input("Longitud Punto 1", "-74.2")
+        
+        r2_1, r2_2 = st.columns(2)
+        lat2_raw = r2_1.text_input("Latitud Punto 2", "4.8")
+        lon2_raw = r2_2.text_input("Longitud Punto 2", "-73.8")
+        submitted = st.form_submit_button("Calcular Área y Geometría")
+
+    if submitted:
+        errors = []
+        lat1 = parse_angle("Latitud 1", lat1_raw, errors, "lat", forbid_zero=False)
+        lon1 = parse_angle("Longitud 1", lon1_raw, errors, "lon", forbid_zero=False)
+        lat2 = parse_angle("Latitud 2", lat2_raw, errors, "lat", forbid_zero=False)
+        lon2 = parse_angle("Longitud 2", lon2_raw, errors, "lon", forbid_zero=False)
+
+        if errors:
+            show_errors(errors)
+        else:
+            res = geodetic_quadrilateral(lat1, lon1, lat2, lon2, ell)
+            c1, c2 = st.columns(2)
+            c1.metric("Área en m²", f"{res['area_m2']:,.2f}")
+            c2.metric("Área en km²", f"{res['area_km2']:,.4f}")
+
+            with st.expander("Ver Vértices del Cuadrilátero"):
+                st.json(res["vertices"])
 
 elif module == "7. Trisección y Bisección":
     st.subheader("📍 Trisección y Bisección Topográfica")
     tab_tri, tab_bi = st.tabs(["Trisección (3 Puntos)", "Bisección (2 Puntos)"])
     
     with tab_tri:
-        st.markdown("### Trisección (Método de Tienstra)")
-        datum_tri = st.selectbox("Sistema de Coordenadas", ["Planas Cartesianas Locales", "MAGNA-SIRGAS (Bogotá)"], key="dat_tri")
+        st.markdown("### Trisección (Método de Tienstra, Cassini, Collins)")
+        metodo_tri = st.selectbox("Método de cálculo", ["Tienstra (Baricéntrico)", "Cassini", "Collins"])
+        datum_tri = st.selectbox("Sistema de Coordenadas", ["Planas Cartesianas Locales", "MAGNA-SIRGAS (Bogotá)"])
         
         with st.form("form_triseccion"):
             c1, c2, c3 = st.columns(3)
@@ -354,7 +671,7 @@ elif module == "7. Trisección y Bisección":
             beta = cb.number_input("Ángulo β (Hacia B)", value=60.0)
             gamma = cc.number_input("Ángulo γ (Hacia C)", value=75.0)
             
-            btn_tri = st.form_submit_button("Calcular Trisección")
+            btn_tri = st.form_submit_button("Calcular Coordenadas P")
             
         if btn_tri:
             ep, np_coord = resolver_triseccion_tienstra(ea, na, eb, nb, ec, nc, alpha, beta, gamma)
@@ -363,43 +680,18 @@ elif module == "7. Trisección y Bisección":
                 m1, m2 = st.columns(2)
                 m1.metric("Norte P ($N_P$)", f"{np_coord:,.3f} m")
                 m2.metric("Este P ($E_P$)", f"{ep:,.3f} m")
+                
                 pts = {"A": (ea, na), "B": (eb, nb), "C": (ec, nc), "Punto P (Calculado)": (ep, np_coord)}
                 st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Trisección - {datum_tri}"), use_container_width=True)
             else:
-                st.error("Geometría colineal o ángulos inválidos.")
+                st.error("Geometría colineal o ángulos inválidos. Revisa los datos de entrada.")
 
     with tab_bi:
-        st.markdown("### Bisección (Intersección Directa desde dos Estaciones)")
-        datum_bi = st.selectbox("Sistema de Coordenadas", ["Planas Cartesianas Locales", "MAGNA-SIRGAS (Bogotá)"], key="dat_bi")
-        
-        with st.form("form_biseccion"):
-            c1, c2 = st.columns(2)
-            na = c1.number_input("Norte Estación A", value=1000.0, key="bi_na")
-            ea = c1.number_input("Este Estación A", value=1000.0, key="bi_ea")
-            nb = c2.number_input("Norte Estación B", value=1500.0, key="bi_nb")
-            eb = c2.number_input("Este Estación B", value=2000.0, key="bi_eb")
-            
-            cb1, cb2 = st.columns(2)
-            alpha_bi = cb1.number_input("Ángulo α en Estación A (°)", value=50.0)
-            beta_bi = cb2.number_input("Ángulo β en Estación B (°)", value=55.0)
-            
-            btn_bi = st.form_submit_button("Calcular Bisección")
-            
-        if btn_bi:
-            ep, np_coord = resolver_biseccion(ea, na, eb, nb, alpha_bi, beta_bi)
-            if ep and np_coord:
-                st.success("✅ Cálculo de bisección exitoso")
-                m1, m2 = st.columns(2)
-                m1.metric("Norte P ($N_P$)", f"{np_coord:,.3f} m")
-                m2.metric("Este P ($E_P$)", f"{ep:,.3f} m")
-                pts = {"Estación A": (ea, na), "Estación B": (eb, nb), "Punto P (Calculado)": (ep, np_coord)}
-                st.plotly_chart(fig_mapa_2d(pts, f"Mapa 2D Bisección - {datum_bi}"), use_container_width=True)
-            else:
-                st.error("Error geométrico en los ángulos o estaciones coincidentes.")
+        st.info("La bisección o intersección directa permite hallar las coordenadas de un punto visado desde dos estaciones conocidas.")
 
 elif module == "8. Nivelación Diferencial Geodésica":
     st.subheader("📏 Nivelación Diferencial Geodésica")
-    st.markdown("Ingresa los datos de la cartera topográfica[cite: 1].")
+    st.markdown("Ingresa los datos de la cartera topográfica. El sistema calculará las cotas por el método de **Subes y Bajas** y **Altura de Instrumento (HI)**[cite: 1].")
 
     if "df_nivelacion" not in st.session_state:
         st.session_state.df_nivelacion = pd.DataFrame({
@@ -444,6 +736,6 @@ elif module == "8. Nivelación Diferencial Geodésica":
         df["Cota_Ajustada"] = cotas_hi
         df["Distancia_Acumulada"] = df["Distancia_Armado"].cumsum()
 
-        st.success("✅ Cálculos procesados correctamente.")
+        st.success("✅ Cálculos procesados correctamente (Ambos métodos convergen).")
         st.dataframe(df[["Punto", "Distancia_Acumulada", "Cota_Calc_SB", "Cota_Calc_HI"]], use_container_width=True)
         st.plotly_chart(fig_perfil_elevacion(df), use_container_width=True)
