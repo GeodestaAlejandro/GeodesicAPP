@@ -8,6 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import hmac
+from geographiclib.geoid import Geoid
 
 # =========================================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS (FRONTEND AMIGABLE)
