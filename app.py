@@ -85,7 +85,7 @@ def require_login():
 
     st.stop()
 
-# require_login()  # Descomenta si usas st.secrets
+require_login()  # Descomenta si usas st.secrets
 
 
 # =========================
