@@ -443,7 +443,82 @@ def fig_perfil_elevacion(df):
                       yaxis_title="Cota (m.s.n.m.)", template="plotly_white", height=450)
     return fig
 
-
+def fig_geoide_3d(lat_pt=None, lon_pt=None, ell=None, exag=15000):
+    # 1. Crear malla global de latitudes y longitudes
+    lon = np.linspace(-180, 180, 100)
+    lat = np.linspace(-90, 90, 50)
+    Lon, Lat = np.meshgrid(lon, lat)
+    
+    # 2. Simular las ondulaciones principales (N) del Geoide EGM96 en metros.
+    # En un entorno de producción, esta matriz 'N' se extrae de un GeoTIFF usando rasterio.
+    N = (
+        -105 * np.exp(-((Lon - 75)**2 + (Lat - (-10))**2) / 1000) +  # Depresión Océano Índico
+          85 * np.exp(-((Lon - 140)**2 + (Lat - 0)**2) / 1000) +     # Pico Nueva Guinea
+          60 * np.exp(-((Lon - (-15))**2 + (Lat - 50)**2) / 1000) -  # Pico Atlántico Norte
+          60 * np.exp(-((Lon - (-70))**2 + (Lat - 15)**2) / 1000)    # Depresión Zona Andina/Caribe
+    )
+    
+    phi = np.radians(Lat)
+    theta = np.radians(Lon)
+    
+    # 3. Calcular radio deformado (Elipsoide aproximado a esfera + ondulación exagerada)
+    R_base = ell.a if ell else 6378137.0
+    R_def = R_base + N * exag
+    
+    X = R_def * np.cos(phi) * np.cos(theta)
+    Y = R_def * np.cos(phi) * np.sin(theta)
+    Z = R_def * np.sin(phi)
+    
+    fig = go.Figure()
+    
+    # Superficie base de "La Papa"
+    fig.add_trace(go.Surface(
+        x=X, y=Y, z=Z, 
+        surfacecolor=N, 
+        colorscale='Earth', 
+        colorbar_title="Ondulación N (m)",
+        name="Superficie Geoidal",
+        opacity=0.95
+    ))
+    
+    # 4. Agregar el punto de interés ingresado por el usuario
+    if lat_pt is not None and lon_pt is not None:
+        phi_pt = math.radians(lat_pt)
+        theta_pt = math.radians(lon_pt)
+        
+        # Calcular ondulación aproximada en ese punto específico
+        n_pt = (
+            -105 * math.exp(-((lon_pt - 75)**2 + (lat_pt - (-10))**2) / 1000) +
+              85 * math.exp(-((lon_pt - 140)**2 + (lat_pt - 0)**2) / 1000) +
+              60 * math.exp(-((lon_pt - (-15))**2 + (lat_pt - 50)**2) / 1000) -
+              60 * math.exp(-((lon_pt - (-70))**2 + (lat_pt - 15)**2) / 1000)
+        )
+        
+        r_pt = R_base + n_pt * exag
+        xp = r_pt * math.cos(phi_pt) * math.cos(theta_pt)
+        yp = r_pt * math.cos(phi_pt) * math.sin(theta_pt)
+        zp = r_pt * math.sin(phi_pt)
+        
+        # Marcador topográfico
+        fig.add_trace(go.Scatter3d(
+            x=[xp], y=[yp], z=[zp],
+            mode='markers+text',
+            marker=dict(size=8, color='#ef4444', symbol='circle', line=dict(color='white', width=2)),
+            text=[f"📍 Punto ({lat_pt}°, {lon_pt}°)"],
+            textposition="top center",
+            name="Tu Ubicación"
+        ))
+        
+    fig.update_layout(
+        title="Modelo Exagerado del Geoide ('La Papa')",
+        scene=dict(
+            xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
+            aspectmode='data', camera=dict(eye=dict(x=1.5, y=1.5, z=0.8))
+        ),
+        margin=dict(l=0, r=0, t=40, b=0),
+        template="plotly_dark"  # Fondo oscuro para realzar la volumetría del geoide
+    )
+    return fig
 # =========================
 # 7. NAVEGACIÓN Y ESTRUCTURA DE LA APP
 # =========================
@@ -473,7 +548,8 @@ with st.sidebar:
             "5. Arco de Paralelo",
             "6. Cuadrilátero Geodésico y Área",
             "7. Trisección y Bisección",
-            "8. Nivelación Diferencial Geodésica"
+            "8. Nivelación Diferencial Geodésica",
+            "9. Visualizador del Geoide 3D (La Papa)"
         ]
     )
 
@@ -739,3 +815,25 @@ elif module == "8. Nivelación Diferencial Geodésica":
         st.success("✅ Cálculos procesados correctamente (Ambos métodos convergen).")
         st.dataframe(df[["Punto", "Distancia_Acumulada", "Cota_Calc_SB", "Cota_Calc_HI"]], use_container_width=True)
         st.plotly_chart(fig_perfil_elevacion(df), use_container_width=True)
+        
+elif module == "9. Visualizador del Geoide 3D (La Papa)":
+    st.subheader("🥔 Visualizador del Geoide (La Papa)")
+    st.markdown("Representación 3D del campo de gravedad terrestre, exagerando las ondulaciones geoidales ($N$) para hacer visibles las irregularidades respecto al elipsoide matemático.")
+
+    with st.form("geoid_form"):
+        c1, c2, c3 = st.columns(3)
+        lat_raw = c1.text_input("Latitud", "4.60", help="Latitud de la coordenada a localizar")
+        lon_raw = c2.text_input("Longitud", "-74.08", help="Longitud de la coordenada a localizar")
+        exag = c3.slider("Factor de exageración", min_value=1000, max_value=50000, value=15000, step=1000)
+        submitted = st.form_submit_button("Renderizar Geoide")
+
+    if submitted:
+        errors = []
+        lat = parse_angle("Latitud", lat_raw, errors, "lat", forbid_zero=False)
+        lon = parse_angle("Longitud", lon_raw, errors, "lon", forbid_zero=False)
+        
+        if errors:
+            show_errors(errors)
+        else:
+            st.plotly_chart(fig_geoide_3d(lat, lon, ell, exag), use_container_width=True)
+            st.info("💡 **Nota técnica:** Este visor emplea un modelo matemático suavizado de las anomalías principales de EGM96. El factor de exageración multiplica el valor real de $N$ para que la topología gravitatoria sea perceptible en la escala del planeta.")
