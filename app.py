@@ -77,7 +77,7 @@ def require_login():
         valid_password = users.get(username)
 
         if isinstance(valid_password, str) and hmac.compare_digest(password, valid_password):
-            st.session_state["authenticated"] = False
+            st.session_state["authenticated"] = True
             st.session_state["username"] = username
             st.rerun()
         else:
