@@ -12,6 +12,7 @@ import os
 import urllib.request
 import tarfile
 from geographiclib.geoid import Geoid
+
 # =========================================================
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS (FRONTEND AMIGABLE)
 # =========================================================
