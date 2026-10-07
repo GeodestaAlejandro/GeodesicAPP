@@ -379,6 +379,93 @@ def geodetic_quadrilateral(lat1_deg: float, lon1_deg: float, lat2_deg: float, lo
         ]
     }
 
+def fig_ecef_surface_point(x: float, y: float, z: float, ell: Ellipsoid) -> go.Figure:
+    """Genera un gráfico 3D mostrando el elipsoide en transparencia y el punto ECEF proyectado."""
+    fig = go.Figure()
+    
+    # Malla ligera del elipsoide de referencia para contexto espacial
+    u = np.linspace(0, 2 * math.pi, 40)
+    v = np.linspace(0, math.pi, 20)
+    xs = ell.a * np.outer(np.cos(u), np.sin(v))
+    ys = ell.a * np.outer(np.sin(u), np.sin(v))
+    zs = ell.b * np.outer(np.ones_like(u), np.cos(v))
+    
+    fig.add_trace(go.Surface(
+        x=xs, y=ys, z=zs,
+        colorscale='Blues', opacity=0.2, showscale=False, name="Elipsoide"
+    ))
+    
+    # Vector y marcador del punto ECEF ingresado
+    fig.add_trace(go.Scatter3d(
+        x=[0, x], y=[0, y], z=[0, z],
+        mode='lines+markers',
+        line=dict(color='#ef4444', width=5),
+        marker=dict(size=[3, 8], color=['#0f172a', '#ef4444']),
+        name="Vector Posición ECEF"
+    ))
+    
+    fig.update_layout(
+        title="Posición ECEF sobre el Elipsoide de Referencia",
+        scene=dict(xaxis_title="X (m)", yaxis_title="Y (m)", zaxis_title="Z (m)", aspectmode='data'),
+        height=500,
+        margin=dict(l=0, r=0, t=40, b=0),
+        template="plotly_white"
+    )
+    return fig
+
+def fig_parallel_arc(lat_deg: float, lon1_deg: float, lon2_deg: float, ell: Ellipsoid) -> go.Figure:
+    """Genera un gráfico 3D trazando el arco de paralelo sobre la superficie elipsoidal."""
+    lat_rad = math.radians(lat_deg)
+    N = ell.a / math.sqrt(1.0 - ell.e2 * math.sin(lat_rad)**2)
+    
+    # Generar puntos a lo largo del paralelo
+    lons = np.linspace(lon1_deg, lon2_deg, 100)
+    lons_rad = np.radians(lons)
+    
+    X = (N) * math.cos(lat_rad) * np.cos(lons_rad)
+    Y = (N) * math.cos(lat_rad) * np.sin(lons_rad)
+    Z = (N * (1.0 - ell.e2)) * math.sin(lat_rad) * np.ones_like(lons_rad)
+    
+    fig = go.Figure()
+    
+    # Elipsoide de fondo en transparencia
+    u = np.linspace(0, 2 * math.pi, 40)
+    v = np.linspace(0, math.pi, 20)
+    xs = ell.a * np.outer(np.cos(u), np.sin(v))
+    ys = ell.a * np.outer(np.sin(u), np.sin(v))
+    zs = ell.b * np.outer(np.ones_like(u), np.cos(v))
+    
+    fig.add_trace(go.Surface(
+        x=xs, y=ys, z=zs,
+        colorscale='Greys', opacity=0.15, showscale=False, name="Elipsoide"
+    ))
+    
+    # Curva del arco de paralelo
+    fig.add_trace(go.Scatter3d(
+        x=X, y=Y, z=Z,
+        mode='lines',
+        line=dict(color='#0284c7', width=6),
+        name="Arco de Paralelo"
+    ))
+    
+    # Puntos extremos del arco
+    fig.add_trace(go.Scatter3d(
+        x=[X[0], X[-1]], y=[Y[0], Y[-1]], z=[Z[0], Z[-1]],
+        mode='markers+text',
+        marker=dict(size=6, color='#ef4444'),
+        text=[f"Inicio ({lon1_deg}°)", f"Fin ({lon2_deg}°)"],
+        textposition="top center",
+        name="Extremos"
+    ))
+    
+    fig.update_layout(
+        title=f"Visualización 3D del Arco de Paralelo (Lat: {lat_deg}°)",
+        scene=dict(xaxis_title="X (m)", yaxis_title="Y (m)", zaxis_title="Z (m)", aspectmode='data'),
+        height=500,
+        margin=dict(l=0, r=0, t=40, b=0),
+        template="plotly_white"
+    )
+    return fig
 
 # =========================
 # 5. CÁLCULOS TOPOGRÁFICOS (TRISECCIÓN Y NIVELACIÓN)
@@ -719,7 +806,7 @@ elif module == "4. Cartesianas (ECEF) → Geodésicas":
         y = parse_required_float("Y", y_raw, errors)
         z = parse_required_float("Z", z_raw, errors)
 
-        if x and y and z:
+        if x is not None and y is not None and z is not None:
             validate_ecef_values(x, y, z, ell, errors)
 
         if errors:
@@ -732,6 +819,9 @@ elif module == "4. Cartesianas (ECEF) → Geodésicas":
             m2.metric("Longitud (°)", f"{lon:.8f}")
             m3.metric("Altura h (m)", f"{h:,.3f}")
             m4.metric("Iteraciones", str(iters))
+            
+            # Gráfico 3D de ubicación sobre el elipsoide
+            st.plotly_chart(fig_ecef_surface_point(x, y, z, ell), use_container_width=True)
 
 elif module == "5. Arco de Paralelo":
     st.subheader("📏 Longitud de Arco de Paralelo")
@@ -756,6 +846,9 @@ elif module == "5. Arco de Paralelo":
             m1, m2 = st.columns(2)
             m1.metric("ΔLongitud (°)", f"{dlon:.6f}")
             m2.metric("Longitud del Arco (m)", f"{arc_len:,.3f}")
+            
+            # Gráfico 3D del arco de paralelo
+            st.plotly_chart(fig_parallel_arc(lat, lon1, lon2, ell), use_container_width=True)
 
 elif module == "6. Cuadrilátero Geodésico y Área":
     st.subheader("🗺️ Cuadrilátero Geodésico y Cálculo de Área")
